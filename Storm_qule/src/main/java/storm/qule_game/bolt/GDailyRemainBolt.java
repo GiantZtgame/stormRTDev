@@ -52,56 +52,56 @@ public class GDailyRemainBolt extends BaseBasicBolt {
         String login_ip = tuple.getString(5);
         String uname = tuple.getString(6);
 
-        if (login_success.equals("1")) {
-            //判断是否为广告用户
-            String tbname = "opdata_dailyRemain";
-            String hash_key = "gadinfo-" + platform_id + "-" + uname;
-            if (_jedis.exists(hash_key)) {
-                String adplanning_id = _jedis.hget(hash_key, "adplanning_id");
-                if (Integer.parseInt(adplanning_id) > 0) {
-                    tbname = "adthru_dailyRemain";
+        String host = _prop.getProperty("game." + game_abbr + ".mysql_host");
+        String port = _prop.getProperty("game." + game_abbr + ".mysql_port");
+        String db = _prop.getProperty("game." + game_abbr + ".mysql_db");
+        String user = _prop.getProperty("game." + game_abbr + ".mysql_user");
+        String passwd = _prop.getProperty("game." + game_abbr + ".mysql_passwd");
+        if (host != null) {
+            if (login_success.equals("1")) {
+                //判断是否为广告用户
+                String tbname = "opdata_dailyRemain";
+                String hash_key = "gadinfo-" + platform_id + "-" + uname;
+                if (_jedis.exists(hash_key)) {
+                    String adplanning_id = _jedis.hget(hash_key, "adplanning_id");
+                    if (Integer.parseInt(adplanning_id) > 0) {
+                        tbname = "adthru_dailyRemain";
+                    }
                 }
-            }
-            String todayStr = date.timestamp2str(datetime, "yyyyMMdd");
-            List someday = new ArrayList();
-            List<String> sqls = new ArrayList<String>();
-            someday.add(1);
-            someday.add(2);
-            someday.add(3);
-            someday.add(4);
-            someday.add(5);
-            someday.add(6);
-            someday.add(7);
-            someday.add(14);
-            someday.add(30);
-            System.out.println("======================================");
-            for (int i=0;i<someday.size();i++) {
-                String day = someday.get(i).toString();
-                int d = Integer.parseInt(todayStr)-Integer.parseInt(day);
-                //redis key
-                String someday_ip = "login:"+platform_id+":"+server_id+":"+game_abbr+":"+d+":ip:set";
-                String dailyremain = "gdailyremain:"+platform_id+":"+server_id+":"+game_abbr+":"+todayStr+":"+i+":incr";
-                if (_jedis.sismember(someday_ip, login_ip)) {
-                    _jedis.incr(dailyremain);
-                    _jedis.expire(dailyremain, 24*60*60);
+                String todayStr = date.timestamp2str(datetime, "yyyyMMdd");
+                List someday = new ArrayList();
+                List<String> sqls = new ArrayList<String>();
+                someday.add(1);
+                someday.add(2);
+                someday.add(3);
+                someday.add(4);
+                someday.add(5);
+                someday.add(6);
+                someday.add(7);
+                someday.add(14);
+                someday.add(30);
+                System.out.println("======================================");
+                for (int i = 0; i < someday.size(); i++) {
+                    String day = someday.get(i).toString();
+                    int d = Integer.parseInt(todayStr) - Integer.parseInt(day);
+                    //redis key
+                    String someday_ip = "login:" + platform_id + ":" + server_id + ":" + game_abbr + ":" + d + ":ip:set";
+                    String dailyremain = "gdailyremain:" + platform_id + ":" + server_id + ":" + game_abbr + ":" + todayStr + ":" + i + ":incr";
+                    if (_jedis.sismember(someday_ip, login_ip)) {
+                        _jedis.incr(dailyremain);
+                        _jedis.expire(dailyremain, 24 * 60 * 60);
+                    }
+                    String data = _jedis.exists(dailyremain) ? _jedis.get(dailyremain) : "0";
+                    String sql = "INSERT INTO `" + tbname + "` (`platform`,`server`,`date`,`day" + day + "`) VALUES(" + platform_id + "," + server_id + "," + d + "," + data +
+                            ") ON DUPLICATE KEY UPDATE `day" + day + "` = " + data;
+                    sqls.add(sql);
+                    System.out.println("第" + day + "日留存：" + data);
                 }
-                String data = _jedis.exists(dailyremain)?_jedis.get(dailyremain):"0";
-                String sql = "INSERT INTO `"+tbname+"` (`platform`,`server`,`date`,`day"+day+"`) VALUES("+platform_id+","+server_id+","+d+","+data+
-                        ") ON DUPLICATE KEY UPDATE `day"+day+"` = "+data;
-                sqls.add(sql);
-                System.out.println("第"+day+"日留存："+data);
-            }
-            System.out.println("======================================");
-
-            String host = _prop.getProperty("game." + game_abbr + ".mysql_host");
-            String port = _prop.getProperty("game." + game_abbr + ".mysql_port");
-            String db = _prop.getProperty("game." + game_abbr + ".mysql_db");
-            String user = _prop.getProperty("game." + game_abbr + ".mysql_user");
-            String passwd = _prop.getProperty("game." + game_abbr + ".mysql_passwd");
-
-            JdbcMysql con = JdbcMysql.getInstance(game_abbr,host , port , db, user, passwd);
-            if (con.batchAdd(sqls)) {
-                System.out.println("*********** Success ************");
+                System.out.println("======================================");
+                JdbcMysql con = JdbcMysql.getInstance(game_abbr, host, port, db, user, passwd);
+                if (con.batchAdd(sqls)) {
+                    System.out.println("*********** Success ************");
+                }
             }
         }
     }
