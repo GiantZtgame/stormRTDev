@@ -1,4 +1,4 @@
-# Windows image file caches
+﻿# Windows image file caches
 Thumbs.db
 ehthumbs.db
 
@@ -38,6 +38,7 @@ Icon
 
 #忽略Storm_qule目录下所有文件，src文件夹除外
 Storm_qule/
+
 !src/
 
 
