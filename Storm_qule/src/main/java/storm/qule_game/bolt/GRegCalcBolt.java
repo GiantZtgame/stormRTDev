@@ -125,7 +125,7 @@ public class GRegCalcBolt extends BaseBasicBolt {
             //当天按职业注册人数
             String key3 = todayStr + ":" + game_abbr + ":" + platform_id + ":" + server_id + ":" + job_id + ":incr";
             //Integer count3 = todayJoblyRegCounts.get(key3);
-            Integer count3 = null == _jedis.get("joblyRegCounts:" + key3) ? 0 : Integer.parseInt(_jedis.get("joblyRegCounts" + key3));
+            Integer count3 = null == _jedis.get("joblyRegCounts:" + key3) ? 0 : Integer.parseInt(_jedis.get("joblyRegCounts:" + key3));
             //if (null == count3) {
             //    count3 = 0;
             //}
