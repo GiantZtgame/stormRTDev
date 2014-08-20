@@ -17,7 +17,6 @@ import storm.qule_game.spout.SampleGregSpout;
  */
 public class GpLoginTopology {
     public static void main(String[] args) throws Exception {
-        String a;
         TopologyBuilder builder = new TopologyBuilder();
         //请求登录
         builder.setBolt("gloginreq_verify_bolt", new GLoginreqVeriBolt(), 1).shuffleGrouping("gloginreq_spout");
