@@ -1,0 +1,1 @@
+AHSG|100|1|2014-04-15 08:34:48|adreg|AHSG_100_100_1|0|testaccount|127.0.0.1|http://www.baidu.com
