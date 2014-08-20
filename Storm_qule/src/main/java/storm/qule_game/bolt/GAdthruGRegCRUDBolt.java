@@ -89,7 +89,7 @@ public class GAdthruGRegCRUDBolt extends BaseBasicBolt {
                 jobRegDbCol, hourlyRegDbCol, adplanning_id, chunion_subid, platform_id, server_id, todayDate, datetime, count3, count1, count2, countip, datetime, jobRegDbCol, count3, count1, hourlyRegDbCol, count2, countip);
 
         //写入ad_realtime表
-        String ad_realtime_tbname = "adp_charlogin_" + todayStr;
+        String ad_realtime_tbname = "ad_realtime_" + todayStr;
         String create_ad_realtime_sql = String.format("CREATE TABLE IF NOT EXISTS %s (`id` int(11) unsigned NOT NULL AUTO_INCREMENT,`adplanning_id` int(11) unsigned NOT NULL," +
                 "`chunion_subid` int(11) unsigned NOT NULL DEFAULT 0,`datetime` int(11) unsigned NOT NULL,`duration_type` tinyint(3) unsigned NOT NULL," +
                 "`p_reg` int(11) unsigned NOT NULL DEFAULT 0,`characters` int(11) unsigned NOT NULL DEFAULT 0,`ip` int(11) unsigned NOT NULL DEFAULT 0," +
