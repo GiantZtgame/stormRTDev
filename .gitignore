@@ -32,12 +32,11 @@ Icon
 
 # Files that might appear on external disk
 .Spotlight-V100
+
 .Trashes
-
-
-
-
-# idea config files
-Storm_qule/.idea/*
-Storm_qule/.idea/vcs.xml
-Storm_qule/.idea/workspace.xml
+.gitignore
+Storm_qule\.idea
+Storm_qule\multilang
+Storm_qule\target
+Storm_qule\pom.xml
+Storm_qule\storm_qule.iml

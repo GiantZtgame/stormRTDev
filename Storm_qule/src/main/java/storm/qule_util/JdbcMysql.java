@@ -18,8 +18,7 @@ public class JdbcMysql {
     private Statement statement =null;
     private ResultSet result=null;
     private static JdbcMysql __instance = null;
-    static List<String> Instance = new ArrayList<String>();
-    //static Map<String,JdbcMysql> __instance = new HashMap<String,JdbcMysql>();
+    static Map<String,JdbcMysql> Instance = new HashMap<String,JdbcMysql>();
     private boolean b;
     private int a;
 
@@ -29,11 +28,12 @@ public class JdbcMysql {
         DB = db;
         USER = user;
         PASSWD = passwd;
-        if(!Instance.contains(game_abbr)) {
+        __instance = Instance.get(game_abbr);
+        if(__instance == null) {
             synchronized (JdbcMysql.class) {
                 System.out.println("new instance");
-                Instance.add(game_abbr);
                 __instance = new JdbcMysql();
+                Instance.put(game_abbr, __instance);
             }
         }
         return __instance;
