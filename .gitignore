@@ -35,8 +35,9 @@ Icon
 
 .Trashes
 .gitignore
-Storm_qule\.idea
-Storm_qule\multilang
-Storm_qule\target
-Storm_qule\pom.xml
-Storm_qule\storm_qule.iml
+
+#忽略Storm_qule目录下所有文件，src文件夹除外
+Storm_qule/
+!src/
+
+

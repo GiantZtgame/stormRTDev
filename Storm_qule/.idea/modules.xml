@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/storm_qule.iml" filepath="$PROJECT_DIR$/storm_qule.iml" />
+      <module fileurl="file://$PROJECT_DIR$/Storm_qule.iml" filepath="$PROJECT_DIR$/Storm_qule.iml" />
     </modules>
   </component>
 </project>
