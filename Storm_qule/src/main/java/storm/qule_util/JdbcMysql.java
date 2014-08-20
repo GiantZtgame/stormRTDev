@@ -6,10 +6,7 @@ import clojure.lang.Obj;
 import com.mysql.jdbc.Connection;
 import com.mysql.jdbc.exceptions.jdbc4.CommunicationsException;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class JdbcMysql {
     private Connection conn =null;
@@ -20,7 +17,9 @@ public class JdbcMysql {
     private static String PASSWD;
     private Statement statement =null;
     private ResultSet result=null;
-    static Map<String,JdbcMysql> __instance = new HashMap<String,JdbcMysql>();
+    private static JdbcMysql __instance = null;
+    static List<String> Instance = new ArrayList<String>();
+    //static Map<String,JdbcMysql> __instance = new HashMap<String,JdbcMysql>();
     private boolean b;
     private int a;
 
@@ -30,13 +29,14 @@ public class JdbcMysql {
         DB = db;
         USER = user;
         PASSWD = passwd;
-        if(null == __instance.get(game_abbr)) {
+        if(!Instance.contains(game_abbr)) {
             synchronized (JdbcMysql.class) {
                 System.out.println("new instance");
-                __instance.put(game_abbr,new JdbcMysql());
+                Instance.add(game_abbr);
+                __instance = new JdbcMysql();
             }
         }
-        return __instance.get(game_abbr);
+        return __instance;
     }
 
     static {
