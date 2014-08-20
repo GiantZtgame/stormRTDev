@@ -28,13 +28,14 @@ public class GRechargeBolt extends BaseBasicBolt {
      * @param context
      */
     public void prepare(Map stormConf, TopologyContext context) {
-        if (stormConf.get("isOnline").toString().equals("true")) {
+        boolean isOnline = Boolean.parseBoolean(stormConf.get("isOnline").toString());
+        if (isOnline) {
             _gamecfg = stormConf.get("gamecfg_path").toString();
         }
         else {
             _gamecfg = "/config/test.games.properties";
         }
-        _prop = _cfgLoader.loadConfig(_gamecfg, Boolean.parseBoolean(stormConf.get("isOnline").toString()));
+        _prop = _cfgLoader.loadConfig(_gamecfg, isOnline);
         _jedis = new jedisUtil().getJedis(_prop.getProperty("redis.host"), Integer.parseInt(_prop.getProperty("redis.port")));
     }
 
@@ -60,81 +61,82 @@ public class GRechargeBolt extends BaseBasicBolt {
             String yb_amnt = logs[8];
             String uname = logs[9];
             String cname = logs[10];
-            if (keywords.equals("bill")) {
-                String adkey = "gadinfo-" + platform + "-" + uname;
-                String chid = "0";
-                String chposid = "0";
-                String adplanning_id = "0";
-                String chunion_subid = "0";
-                if (_jedis.exists(adkey)) {
-                    List<String> gadinfo = _jedis.hmget(adkey, "chid", "chposid", "adplanning_id", "chunion_subid");
-                    chid = gadinfo.get(0);
-                    chposid = gadinfo.get(1);
-                    adplanning_id = gadinfo.get(2);
-                    chunion_subid = gadinfo.get(3);
-                }
-                String log_key = _prop.getProperty("game." + game_abbr + ".key");
-                String raw_str = game_abbr + platform + server + log_key;
-                String token_gen = "";
-                try {
-                    token_gen = new md5().gen_md5(raw_str);
-                } catch (NoSuchAlgorithmException e) {
-                    e.printStackTrace();
-                }
-                if (token_gen.equals(token)) {
-                    String host = _prop.getProperty("game." + game_abbr + ".mysql_host");
-                    String port = _prop.getProperty("game." + game_abbr + ".mysql_port");
-                    String db = _prop.getProperty("game." + game_abbr + ".mysql_db");
-                    String user = _prop.getProperty("game." + game_abbr + ".mysql_user");
-                    String passwd = _prop.getProperty("game." + game_abbr + ".mysql_passwd");
 
-                    JdbcMysql con = JdbcMysql.getInstance(game_abbr,host, port, db, user, passwd);
-                    String tbname = "recharge_order_today";
-                    final Map<String, Object> insert = new HashMap<String, Object>();
-                    insert.put("platform", platform);
-                    insert.put("server", server);
-                    insert.put("order_id", order_id);
-                    insert.put("status", 1);
-                    insert.put("uname", uname);
-                    insert.put("ad", 0);
-                    insert.put("cname", cname);
-                    insert.put("amount", amount);
-                    insert.put("yb_amnt", yb_amnt);
-                    insert.put("datetime", datetime);
-                    insert.put("chid", chid);
-                    insert.put("chposid", chposid);
-                    insert.put("adplanning_id", adplanning_id);
-                    insert.put("chunion_subid", chunion_subid);
+            String host = _prop.getProperty("game." + game_abbr + ".mysql_host");
+            String port = _prop.getProperty("game." + game_abbr + ".mysql_port");
+            String db = _prop.getProperty("game." + game_abbr + ".mysql_db");
+            String user = _prop.getProperty("game." + game_abbr + ".mysql_user");
+            String passwd = _prop.getProperty("game." + game_abbr + ".mysql_passwd");
+            if (host != null) {
 
-                    Map<String, Map<String, Object>> data = new HashMap<String, Map<String, Object>>() {{
-                        put("insert", insert);
-                    }};
-                    String sql = con.setSql("insert", tbname, data);
+                if (keywords.equals("bill")) {
+                    String adkey = "gadinfo-" + platform + "-" + uname;
+                    String chid = "0";
+                    String chposid = "0";
+                    String adplanning_id = "0";
+                    String chunion_subid = "0";
+                    if (_jedis.exists(adkey)) {
+                        List<String> gadinfo = _jedis.hmget(adkey, "chid", "chposid", "adplanning_id", "chunion_subid");
+                        chid = gadinfo.get(0);
+                        chposid = gadinfo.get(1);
+                        adplanning_id = gadinfo.get(2);
+                        chunion_subid = gadinfo.get(3);
+                    }
+                    String log_key = _prop.getProperty("game." + game_abbr + ".key");
+                    String raw_str = game_abbr + platform + server + log_key;
+                    String token_gen = "";
+                    try {
+                        token_gen = new md5().gen_md5(raw_str);
+                    } catch (NoSuchAlgorithmException e) {
+                        e.printStackTrace();
+                    }
+                    if (token_gen.equals(token)) {
+                        JdbcMysql con = JdbcMysql.getInstance(game_abbr, host, port, db, user, passwd);
+                        String tbname = "recharge_order_today";
+                        final Map<String, Object> insert = new HashMap<String, Object>();
+                        insert.put("platform", platform);
+                        insert.put("server", server);
+                        insert.put("order_id", order_id);
+                        insert.put("status", 1);
+                        insert.put("uname", uname);
+                        insert.put("ad", 0);
+                        insert.put("cname", cname);
+                        insert.put("amount", amount);
+                        insert.put("yb_amnt", yb_amnt);
+                        insert.put("datetime", datetime);
+                        insert.put("chid", chid);
+                        insert.put("chposid", chposid);
+                        insert.put("adplanning_id", adplanning_id);
+                        insert.put("chunion_subid", chunion_subid);
 
-                    System.out.println("=================================");
-                    System.out.println("平台号：" + platform);
-                    System.out.println("区号：" + server);
-                    System.out.println("账号：" + uname);
-                    System.out.println("游戏名：" + cname);
-                    System.out.println("充值订单：" + order_id);
-                    System.out.println("充值元宝：" + yb_amnt);
-                    System.out.println("=================================");
+                        Map<String, Map<String, Object>> data = new HashMap<String, Map<String, Object>>() {{
+                            put("insert", insert);
+                        }};
+                        String sql = con.setSql("insert", tbname, data);
 
-                    if (con.add(sql)) {
-                        String key = "grechargeinfo-" + platform + "-" + game_abbr + "-" + server + "-" + uname;
-                        String value = "grechargedetail-" + platform + "-" + game_abbr + "-" + server + "-" + uname + "-" + datetime;
-                        _jedis.rpush(key, value);
-                        Map map = new HashMap();
-                        map.put("cname", cname);
-                        map.put("amount", amount);
-                        map.put("order_id", order_id);
-                        map.put("log_time", datetime);
-                        _jedis.hmset(value, map);
-                        System.out.println("*************Success**************");
+                        System.out.println("=================================");
+                        System.out.println("平台号：" + platform);
+                        System.out.println("区号：" + server);
+                        System.out.println("账号：" + uname);
+                        System.out.println("游戏名：" + cname);
+                        System.out.println("充值订单：" + order_id);
+                        System.out.println("充值元宝：" + yb_amnt);
+                        System.out.println("=================================");
+                        if (con.add(sql)) {
+                            String key = "grechargeinfo-" + platform + "-" + game_abbr + "-" + server + "-" + uname;
+                            String value = "grechargedetail-" + platform + "-" + game_abbr + "-" + server + "-" + uname + "-" + datetime;
+                            _jedis.rpush(key, value);
+                            Map map = new HashMap();
+                            map.put("cname", cname);
+                            map.put("amount", amount);
+                            map.put("order_id", order_id);
+                            map.put("log_time", datetime);
+                            _jedis.hmset(value, map);
+                            System.out.println("*************Success**************");
+                        }
                     }
                 }
             }
-
         }
     }
     public void declareOutputFields(OutputFieldsDeclarer declarer) {declarer.declare(new Fields("word"));}
