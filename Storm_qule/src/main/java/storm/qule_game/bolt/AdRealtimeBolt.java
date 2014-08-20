@@ -15,7 +15,7 @@ import java.util.*;
 import java.util.regex.Pattern;
 
 public class AdRealtimeBolt extends BaseBasicBolt {
-    private static Jedis _jedis;
+    private Jedis _jedis;
     private static Properties _prop = new Properties();
 
     private static timerCfgLoader _gamecfgLoader = new timerCfgLoader();
@@ -328,7 +328,7 @@ public class AdRealtimeBolt extends BaseBasicBolt {
                         }
                         System.out.println("******* Success ********");
 
-                        //_jedis.setex("timer:adrealtime:60s", 60, "1");
+                        _jedis.setex("timer:adrealtime:60s", 60, "1");
                     }
                 }
             }

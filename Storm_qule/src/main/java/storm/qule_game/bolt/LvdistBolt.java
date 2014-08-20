@@ -18,7 +18,7 @@ import java.util.Map;
 import java.util.Properties;
 
 public class LvdistBolt extends BaseBasicBolt {
-    private static Jedis _jedis;
+    private Jedis _jedis;
     private static Properties _prop = new Properties();
 
     private static timerCfgLoader _gamecfgLoader = new timerCfgLoader();
