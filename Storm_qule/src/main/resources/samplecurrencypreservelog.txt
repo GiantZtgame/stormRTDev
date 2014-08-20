@@ -1,9 +1,0 @@
-XXXX|100|1|d7defb6aecc3b8e1c8acc651afa7ab79|2013-11-25 08:34:48|currencypreserve|money1:1;money2:11
-XXXX|100|1|d7defb6aecc3b8e1c8acc651afa7ab79|2013-11-25 09:34:48|currencypreserve|money1:2;money2:22
-XXXX|100|1|d7defb6aecc3b8e1c8acc651afa7ab79|2013-11-25 10:34:48|currencypreserve|money1:3;money2:33
-XXXX|100|1|d7defb6aecc3b8e1c8acc651afa7ab79|2013-11-25 11:34:48|currencypreserve|money1:4;money2:44
-XXXX|100|1|d7defb6aecc3b8e1c8acc651afa7ab79|2013-11-25 12:34:48|currencypreserve|money1:5;money2:55
-XXXX|100|1|d7defb6aecc3b8e1c8acc651afa7ab79|2013-11-25 13:34:48|currencypreserve|money1:6;money2:66
-XXXX|100|1|d7defb6aecc3b8e1c8acc651afa7ab79|2013-11-25 14:34:48|currencypreserve|money1:7;money2:77
-XXXX|100|1|d7defb6aecc3b8e1c8acc651afa7ab79|2013-11-25 15:34:48|currencypreserve|money1:8;money2:88
-
