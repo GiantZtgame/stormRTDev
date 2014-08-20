@@ -1,6 +1,0 @@
-AHSG|100|1|2014-04-15 08:34:48|adreg|AHSG_100_100_1|0|testaccount|127.0.0.1|http://www.baidu.com
-AHSG|100|1|2013-11-25 08:34:48|adpost|AHSG_100_100_1|0|127.0.0.1|http://www.baidu.com
-AHSG|100|1|2013-11-25 08:34:48|adloading|AHSG_100_100_1|0|127.0.0.1|http://www.baidu.com
-AHSG|100|1|2013-11-25 08:34:48|adclick|AHSG_100_100_1|0|127.0.0.1|http://www.baidu.com
-AHSG|100|1|2013-11-25 08:34:48|adarrive|AHSG_100_100_1|0|127.0.0.1|http://www.baidu.com
-AHSG|100|1|2013-11-25 08:34:48|adex|AHSG_100_100_1|0|127.0.0.1|http://www.baidu.com

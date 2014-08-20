@@ -38,6 +38,5 @@ Icon
 
 
 # idea config files
-Storm_qule/.idea/*
-Storm_qule/.idea/vcs.xml
-Storm_qule/.idea/workspace.xml
+Storm_qule/.idea
+Storm_qule/target
