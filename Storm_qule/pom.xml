@@ -88,7 +88,7 @@
         </dependency>
 
         <dependency>
-            <groupId>com.zklcient</groupId>
+            <groupId>com.zkclient</groupId>
             <artifactId>zkclient</artifactId>
             <version>0.3</version>
         </dependency>

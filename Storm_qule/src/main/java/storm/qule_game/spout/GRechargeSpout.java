@@ -21,7 +21,7 @@ public class GRechargeSpout extends BaseRichSpout {
     public void fail(Object msgId) {System.out.println("FAIL:"+msgId);}
 
     public void open(Map conf, TopologyContext context, SpoutOutputCollector collector) {
-        InputStream in = getClass().getResourceAsStream("/grecharge_log.txt");
+        InputStream in = getClass().getResourceAsStream("/gbill.txt");
         _sampleLogReader = new BufferedReader(new InputStreamReader(in));
         _collector = collector;
     }
