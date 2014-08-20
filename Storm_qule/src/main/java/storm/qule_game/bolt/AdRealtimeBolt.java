@@ -46,7 +46,6 @@ public class AdRealtimeBolt extends BaseBasicBolt {
         _prop = _gamecfgLoader.loadCfg(_gamecfg, _prop);
 
         //AHSG|100|1|2013-11-25 08:34:48|adloading|AHSG_100_100_1|0|127.0.0.1|http://www.baidu.com
-        //注册
         //AHSG|100|1|2013-11-25 08:34:48|adreg|AHSG_100_100_1|0|testaccount|127.0.0.1|http://www.baidu.com
         String sentence = input.getString(0);
         String[] logs = sentence.split("\\|");
@@ -98,75 +97,73 @@ public class AdRealtimeBolt extends BaseBasicBolt {
                 String r_adarrive_pv_td = "adarrive:" + PSG + ":pv:" + todayStr + ":incr";
 
                 //注册
+                //记录5分钟和1小时时间段注册人数
                 if (keywords.equals("adreg")) {
                     ip = logs[8];
                     _jedis.incr(r_adreg_5m);
                     _jedis.incr(r_adreg_1h);
                 }
                 //广告弹出
+                //记录5分钟，1小时和当天广告弹出的ip和pv
                 if (keywords.equals("adex")) {
                     _jedis.sadd(r_adex_ip_5m, ip);
                     _jedis.sadd(r_adex_ip_1h, ip);
+                    _jedis.sadd(r_adex_ip_td, ip);
+
                     _jedis.incr(r_adex_pv_5m);
                     _jedis.incr(r_adex_pv_1h);
-
                     _jedis.incr(r_adex_pv_td);
+
+                    _jedis.expire(r_adex_ip_td, 24 * 60 * 60);
                     _jedis.expire(r_adex_pv_td, 24 * 60 * 60);
-                    if (!_jedis.sismember(r_adex_ip_td, ip)) {
-                        _jedis.sadd(r_adex_ip_td, ip);
-                        _jedis.expire(r_adex_ip_td, 24 * 60 * 60);
-                    }
                 }
                 //广告加载
+                //记录当天广告加载的ip和pv
                 if (keywords.equals("adloading")) {
+                    _jedis.sadd(r_adloading_ip_td, ip);
                     _jedis.incr(r_adloading_pv_td);
+
+                    _jedis.expire(r_adloading_ip_td, 24 * 60 * 60);
                     _jedis.expire(r_adloading_pv_td, 24 * 60 * 60);
-                    if (!_jedis.sismember(r_adloading_ip_td, ip)) {
-                        _jedis.sadd(r_adloading_ip_td, ip);
-                        _jedis.expire(r_adloading_ip_td, 24 * 60 * 60);
-                    }
 
                 }
                 //广告完展
+                //记录当天广告完展的ip和pv
                 if (keywords.equals("adpost")) {
+                    _jedis.sadd(r_adpost_ip_td, ip);
                     _jedis.incr(r_adpost_pv_td);
-                    _jedis.expire(r_adpost_pv_td, 24 * 60 * 60);
-                    if (!_jedis.sismember(r_adpost_ip_td, ip)) {
-                        _jedis.sadd(r_adpost_ip_td, ip);
-                        _jedis.expire(r_adpost_ip_td, 24 * 60 * 60);
-                    }
 
+                    _jedis.expire(r_adpost_ip_td, 24 * 60 * 60);
+                    _jedis.expire(r_adpost_pv_td, 24 * 60 * 60);
                 }
                 //广告点击
+                //记录当天广告点击的ip和pv
                 if (keywords.equals("adclick")) {
+                    _jedis.sadd(r_adclick_ip_td, ip);
                     _jedis.incr(r_adclick_pv_td);
+
+                    _jedis.expire(r_adclick_ip_td, 24 * 60 * 60);
                     _jedis.expire(r_adclick_pv_td, 24 * 60 * 60);
-                    if (!_jedis.sismember(r_adclick_ip_td, ip)) {
-                        _jedis.sadd(r_adclick_ip_td, ip);
-                        _jedis.expire(r_adclick_ip_td, 24 * 60 * 60);
-                    }
                 }
                 //页面到达
+                //记录当天广告到达的ip和pv
                 if (keywords.equals("adarrive")) {
+                    _jedis.sadd(r_adarrive_ip_td, ip);
                     _jedis.incr(r_adarrive_pv_td);
+
                     _jedis.expire(r_adarrive_pv_td, 24 * 60 * 60);
-                    if (!_jedis.sismember(r_adarrive_ip_td, ip)) {
-                        _jedis.sadd(r_adarrive_ip_td, ip);
-                        _jedis.expire(r_adarrive_ip_td, 24 * 60 * 60);
-                    }
+                    _jedis.expire(r_adarrive_ip_td, 24 * 60 * 60);
                 }
 
                 String adreg_5m = _jedis.exists(r_adreg_5m) ? _jedis.get(r_adreg_5m) : "0";
                 String adreg_1h = _jedis.exists(r_adreg_1h) ? _jedis.get(r_adreg_1h) : "0";
 
-                String adex_pv = _jedis.exists(r_adex_pv_td) ? _jedis.get(r_adex_pv_td) : "0";
-                Long adex_ip = _jedis.exists(r_adex_ip_td) ? _jedis.scard(r_adex_ip_td) : 0l;
-
-                Long adex_ip_5m = _jedis.exists(r_adex_ip_5m) ? _jedis.scard(r_adex_ip_5m) : 0l;
-                Long adex_ip_1h = _jedis.exists(r_adex_ip_1h) ? _jedis.scard(r_adex_ip_1h) : 0l;
-
                 String adex_pv_5m = _jedis.exists(r_adex_pv_5m) ? _jedis.get(r_adex_pv_5m) : "0";
                 String adex_pv_1h = _jedis.exists(r_adex_pv_1h) ? _jedis.get(r_adex_pv_1h) : "0";
+                String adex_pv = _jedis.exists(r_adex_pv_td) ? _jedis.get(r_adex_pv_td) : "0";
+                Long adex_ip_5m = _jedis.exists(r_adex_ip_5m) ? _jedis.scard(r_adex_ip_5m) : 0l;
+                Long adex_ip_1h = _jedis.exists(r_adex_ip_1h) ? _jedis.scard(r_adex_ip_1h) : 0l;
+                Long adex_ip = _jedis.exists(r_adex_ip_td) ? _jedis.scard(r_adex_ip_td) : 0l;
 
                 String adloading_pv = _jedis.exists(r_adloading_pv_td) ? _jedis.get(r_adloading_pv_td) : "0";
                 Long adloading_ip = _jedis.exists(r_adloading_ip_td) ? _jedis.scard(r_adloading_ip_td) : 0l;
@@ -204,8 +201,9 @@ public class AdRealtimeBolt extends BaseBasicBolt {
                     //===================================表platform_adref_today=======================================//
 
                     String tbname = "platform_adref_today";
-                    final Map<String, Object> insert = new HashMap<String, Object>();
-                    final Map<String, Object> update = new HashMap<String, Object>();
+                    Map<String, Object> insert = new HashMap<String, Object>();
+                    Map<String, Object> update = new HashMap<String, Object>();
+
                     insert.put("adplanning_id", adplanning_id);
                     insert.put("chunion_subid", chunion_subid);
                     insert.put("platform", platform);
@@ -235,10 +233,10 @@ public class AdRealtimeBolt extends BaseBasicBolt {
                     update.put("pv_post", adpost_pv);
                     update.put("ip_post", adpost_ip);
 
-                    Map<String, Map<String, Object>> data = new HashMap<String, Map<String, Object>>() {{
-                        put("insert", insert);
-                        put("update", update);
-                    }};
+                    Map<String, Map<String, Object>> data = new HashMap<String, Map<String, Object>>();
+                    data.put("insert", insert);
+                    data.put("update", update);
+
                     String sql = con.setSql("replace", tbname, data);
 
                     //===================================表 ad_realtime_* =======================================//
@@ -261,10 +259,11 @@ public class AdRealtimeBolt extends BaseBasicBolt {
 
                     Long tis_datetime_5m = up_time - up_time % 300;
                     Long tis_datetime_1h = up_time - up_time % 3600;
-                    final Map<String, Object> insert_5m = new HashMap<String, Object>();
-                    final Map<String, Object> insert_1h = new HashMap<String, Object>();
-                    final Map<String, Object> update_5m = new HashMap<String, Object>();
-                    final Map<String, Object> update_1h = new HashMap<String, Object>();
+
+                    Map<String, Object> insert_5m = new HashMap<String, Object>();
+                    Map<String, Object> insert_1h = new HashMap<String, Object>();
+                    Map<String, Object> update_5m = new HashMap<String, Object>();
+                    Map<String, Object> update_1h = new HashMap<String, Object>();
 
                     insert_5m.put("adplanning_id", adplanning_id);
                     insert_5m.put("chunion_subid", chunion_subid);
@@ -292,14 +291,14 @@ public class AdRealtimeBolt extends BaseBasicBolt {
                     update_1h.put("ip", adex_ip_1h);
                     update_1h.put("pv", adex_pv_1h);
 
-                    Map<String, Map<String, Object>> data_5m = new HashMap<String, Map<String, Object>>() {{
-                        put("insert", insert_5m);
-                        put("update", update_5m);
-                    }};
-                    Map<String, Map<String, Object>> data_1h = new HashMap<String, Map<String, Object>>() {{
-                        put("insert", insert_1h);
-                        put("update", update_1h);
-                    }};
+                    Map<String, Map<String, Object>> data_5m = new HashMap<String, Map<String, Object>>();
+                    data_5m.put("insert", insert_5m);
+                    data_5m.put("update", update_5m);
+
+                    Map<String, Map<String, Object>> data_1h = new HashMap<String, Map<String, Object>>();
+                    data_1h.put("insert", insert_1h);
+                    data_1h.put("update", update_1h);
+
                     String sql_5m = con.setSql("replace", tablename, data_5m);
                     String sql_1h = con.setSql("replace", tablename, data_1h);
 
@@ -328,7 +327,6 @@ public class AdRealtimeBolt extends BaseBasicBolt {
                             _jedis.del(r_adex_pv_1h);
                         }
                         System.out.println("******* Success ********");
-
                         _jedis.setex("timer:adrealtime:60s", 60, "1");
                     }
                 }
