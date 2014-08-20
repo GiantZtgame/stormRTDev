@@ -28,13 +28,14 @@ public class GRechargeBolt extends BaseBasicBolt {
      * @param context
      */
     public void prepare(Map stormConf, TopologyContext context) {
-        if (stormConf.get("isOnline").toString().equals("true")) {
+        boolean isOnline = Boolean.parseBoolean(stormConf.get("isOnline").toString());
+        if (isOnline) {
             _gamecfg = stormConf.get("gamecfg_path").toString();
         }
         else {
             _gamecfg = "/config/test.games.properties";
         }
-        _prop = _cfgLoader.loadConfig(_gamecfg, Boolean.parseBoolean(stormConf.get("isOnline").toString()));
+        _prop = _cfgLoader.loadConfig(_gamecfg, isOnline);
         _jedis = new jedisUtil().getJedis(_prop.getProperty("redis.host"), Integer.parseInt(_prop.getProperty("redis.port")));
     }
 

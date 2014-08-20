@@ -30,12 +30,13 @@ public class LvdistBolt extends BaseBasicBolt {
      * @param context
      */
     public void prepare(Map stormConf, TopologyContext context) {
-        if (Boolean.parseBoolean(stormConf.get("isOnline").toString())) {
+        boolean isOnline = Boolean.parseBoolean(stormConf.get("isOnline").toString());
+        if (isOnline) {
             _gamecfg = stormConf.get("gamecfg_path").toString();
         } else {
             _gamecfg = "/config/test.games.properties";
         }
-        _prop = _cfgLoader.loadConfig(_gamecfg, Boolean.parseBoolean(stormConf.get("isOnline").toString()));
+        _prop = _cfgLoader.loadConfig(_gamecfg, isOnline);
         _jedis = new jedisUtil().getJedis(_prop.getProperty("redis.host"), Integer.parseInt(_prop.getProperty("redis.port")));
     }
 
@@ -92,9 +93,6 @@ public class LvdistBolt extends BaseBasicBolt {
 
                     JdbcMysql con = JdbcMysql.getInstance(game_abbr, host, port, db, user, passwd);
 
-                    List<String> sqls = new ArrayList<String>();
-                    Map<String, String> maps = _jedis.hgetAll(lvdist_key);
-
                     //date 当天0点时间戳
                     String[] date1 = datestr.split(" ");
                     if (date1.length == 2) {
@@ -102,6 +100,8 @@ public class LvdistBolt extends BaseBasicBolt {
                     }
                     Long datetime = date.str2timestamp(datestr);
 
+                    List<String> sqls = new ArrayList<String>();
+                    Map<String, String> maps = _jedis.hgetAll(lvdist_key);
                     for (Map.Entry entry : maps.entrySet()) {
                         String sql = "INSERT INTO `opdata_lvDist` (`platform`, `server`," +
                                 " `date`, `level`, `num`) VALUES (" + platform + ", " +
