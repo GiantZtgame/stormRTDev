@@ -20,7 +20,7 @@ import java.util.Properties;
  * Created by zhanghang on 2014/7/22.
  */
 public class GLoginCalcBolt extends BaseBasicBolt {
-    private static Jedis _jedis;
+    private Jedis _jedis;
     private static Properties _prop = new Properties();
 
     private static timerCfgLoader _gamecfgLoader = new timerCfgLoader();
