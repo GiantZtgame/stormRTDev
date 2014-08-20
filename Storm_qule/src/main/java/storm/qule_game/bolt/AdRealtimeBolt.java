@@ -15,7 +15,7 @@ import java.util.*;
 import java.util.regex.Pattern;
 
 public class AdRealtimeBolt extends BaseBasicBolt {
-    private Jedis _jedis;
+    private static Jedis _jedis;
     private static Properties _prop = new Properties();
 
     private static timerCfgLoader _gamecfgLoader = new timerCfgLoader();
