@@ -67,117 +67,119 @@ public class GTaskBolt extends BaseBasicBolt {
             Long taskfin = 0l;
             String update_sql = "";
 
-            //验证token
-            String log_key = _prop.getProperty("game." + game_abbr + ".key");
-            String raw_str = game_abbr + platform + server + log_key;
-            String token_gen = "";
-            try {
-                token_gen = new md5().gen_md5(raw_str);
-            } catch (NoSuchAlgorithmException e) {
-                e.printStackTrace();
-            }
-            if (token_gen.equals(token)) {
+            String host = _prop.getProperty("game." + game_abbr + ".mysql_host");
+            String port = _prop.getProperty("game." + game_abbr + ".mysql_port");
+            String db = _prop.getProperty("game." + game_abbr + ".mysql_db");
+            String user = _prop.getProperty("game." + game_abbr + ".mysql_user");
+            String passwd = _prop.getProperty("game." + game_abbr + ".mysql_passwd");
+            if (host != null) {
 
-                //唯一键
-                String PSG = platform + ":" + server + ":" + game_abbr;
-                System.out.println("======================");
-                //接收任务
-                //AHSG|100|1|xxxxx|2013-11-25 08:34:48|task_recv|100101|z632954401|亂世逍遙|1
-                if (keywords.equals("task_recv") && logs.length == 10) {
-                    uname = logs[7];
-                    cname = logs[8];
-                    String recv_key = "task:" + PSG + ":" + task_id + ":recv:set";
-                    _jedis.sadd(recv_key, cname);
-                    proc1 = _jedis.scard(recv_key);
-                    update_sql = "`proc1`=" + proc1;
-                    System.out.println("接收任务人数：" + proc1);
+                //验证token
+                String log_key = _prop.getProperty("game." + game_abbr + ".key");
+                String raw_str = game_abbr + platform + server + log_key;
+                String token_gen = "";
+                try {
+                    token_gen = new md5().gen_md5(raw_str);
+                } catch (NoSuchAlgorithmException e) {
+                    e.printStackTrace();
                 }
-                //更新任务
-                //AHSG|100|1|xxxxx|2013-11-25 08:34:48|task_update|100101|2|z632954401|亂世逍遙|3
-                else if (keywords.equals("task_update") && logs.length == 11) {
-                    String steps = logs[7];
-                    uname = logs[8];
-                    cname = logs[9];
-                    String update_key = "task:" + PSG + ":" + task_id + ":update:" + steps + ":set";
-                    _jedis.sadd(update_key, cname);
-                    Long update = _jedis.scard(update_key);
-                    update_sql = "`proc" + steps + "`=" + update;
-                    System.out.println("更新至" + steps + "步人数 : " + update);
-                }
-                //完成任务
-                //AHSG|100|1|xxxxx|2013-11-25 08:34:48|task_fin|100101|z632954401|亂世逍遙|5
-                else if (keywords.equals("task_fin") && logs.length == 10) {
-                    uname = logs[7];
-                    cname = logs[8];
-                    String fin_key = "task:" + PSG + ":" + task_id + ":fin:set";
-                    _jedis.sadd(fin_key, cname);
-                    taskfin = _jedis.scard(fin_key);
-                    update_sql = "`taskfin`=" + taskfin;
-                    System.out.println("完成任务人数：" + taskfin);
-                }
-                System.out.println("======================");
+                if (token_gen.equals(token)) {
 
-                String host = _prop.getProperty("game." + game_abbr + ".mysql_host");
-                String port = _prop.getProperty("game." + game_abbr + ".mysql_port");
-                String db = _prop.getProperty("game." + game_abbr + ".mysql_db");
-                String user = _prop.getProperty("game." + game_abbr + ".mysql_user");
-                String passwd = _prop.getProperty("game." + game_abbr + ".mysql_passwd");
+                    //唯一键
+                    String PSG = platform + ":" + server + ":" + game_abbr;
+                    System.out.println("======================");
+                    //接收任务
+                    //AHSG|100|1|xxxxx|2013-11-25 08:34:48|task_recv|100101|z632954401|亂世逍遙|1
+                    if (keywords.equals("task_recv") && logs.length == 10) {
+                        uname = logs[7];
+                        cname = logs[8];
+                        String recv_key = "task:" + PSG + ":" + task_id + ":recv:set";
+                        _jedis.sadd(recv_key, cname);
+                        proc1 = _jedis.scard(recv_key);
+                        update_sql = "`proc1`=" + proc1;
+                        System.out.println("接收任务人数：" + proc1);
+                    }
+                    //更新任务
+                    //AHSG|100|1|xxxxx|2013-11-25 08:34:48|task_update|100101|2|z632954401|亂世逍遙|3
+                    else if (keywords.equals("task_update") && logs.length == 11) {
+                        String steps = logs[7];
+                        uname = logs[8];
+                        cname = logs[9];
+                        String update_key = "task:" + PSG + ":" + task_id + ":update:" + steps + ":set";
+                        _jedis.sadd(update_key, cname);
+                        Long update = _jedis.scard(update_key);
+                        update_sql = "`proc" + steps + "`=" + update;
+                        System.out.println("更新至" + steps + "步人数 : " + update);
+                    }
+                    //完成任务
+                    //AHSG|100|1|xxxxx|2013-11-25 08:34:48|task_fin|100101|z632954401|亂世逍遙|5
+                    else if (keywords.equals("task_fin") && logs.length == 10) {
+                        uname = logs[7];
+                        cname = logs[8];
+                        String fin_key = "task:" + PSG + ":" + task_id + ":fin:set";
+                        _jedis.sadd(fin_key, cname);
+                        taskfin = _jedis.scard(fin_key);
+                        update_sql = "`taskfin`=" + taskfin;
+                        System.out.println("完成任务人数：" + taskfin);
+                    }
+                    System.out.println("======================");
 
-                //date 当天0点时间戳
-                String[] d = datetimestr.split(" ");
-                String tdstr="";
-                if (d.length == 2) {
-                    tdstr = d[0];
-                    datetimestr = tdstr+" 00:00:00";
-                }
-                Long datetime = date.str2timestamp(datetimestr);
+                    //date 当天0点时间戳
+                    String[] d = datetimestr.split(" ");
+                    String tdstr = "";
+                    if (d.length == 2) {
+                        tdstr = d[0];
+                        datetimestr = tdstr + " 00:00:00";
+                    }
+                    Long datetime = date.str2timestamp(datetimestr);
 
-                JdbcMysql con = JdbcMysql.getInstance(game_abbr, host, port, db, user, passwd);
-                List<String> sqls = new ArrayList<String>();
-                String tbname = "gamedata_taskLost_todayup";
+                    JdbcMysql con = JdbcMysql.getInstance(game_abbr, host, port, db, user, passwd);
+                    List<String> sqls = new ArrayList<String>();
+                    String tbname = "gamedata_taskLost_todayup";
 
-                Map<String, Object> insert = new HashMap<String, Object>();
-                insert.put("platform", platform);
-                insert.put("server", server);
-                insert.put("date", datetime);
-                insert.put("if_new", 0);
-                insert.put("taskid", task_id);
-                insert.put("proc1", proc1);
-                insert.put("proc2", proc2);
-                insert.put("proc3", proc3);
-                insert.put("proc4", proc4);
-                insert.put("proc5", proc5);
-                insert.put("proc6", proc6);
-                insert.put("proc7", proc7);
-                insert.put("proc8", proc8);
-                insert.put("proc9", proc9);
-                insert.put("proc10", proc10);
-                insert.put("taskfin", taskfin);
+                    Map<String, Object> insert = new HashMap<String, Object>();
+                    insert.put("platform", platform);
+                    insert.put("server", server);
+                    insert.put("date", datetime);
+                    insert.put("if_new", 0);
+                    insert.put("taskid", task_id);
+                    insert.put("proc1", proc1);
+                    insert.put("proc2", proc2);
+                    insert.put("proc3", proc3);
+                    insert.put("proc4", proc4);
+                    insert.put("proc5", proc5);
+                    insert.put("proc6", proc6);
+                    insert.put("proc7", proc7);
+                    insert.put("proc8", proc8);
+                    insert.put("proc9", proc9);
+                    insert.put("proc10", proc10);
+                    insert.put("taskfin", taskfin);
 
-                Map<String, Map<String, Object>> data = new HashMap<String, Map<String, Object>>();
-                data.put("insert", insert);
+                    Map<String, Map<String, Object>> data = new HashMap<String, Map<String, Object>>();
+                    data.put("insert", insert);
 
-                String sql = con.setSql("insert", tbname, data) + " ON DUPLICATE KEY UPDATE " + update_sql;
-                sqls.add(sql);
-                //判断是否为新用户
-                String regkey = "greginfo-" + platform + "-" + game_abbr + "-" + server + "-" + uname;
-                if (_jedis.exists(regkey)) {
-                    List userinfo = _jedis.lrange(regkey, 0, 0);
-                    String[] info = userinfo.get(0).toString().split("-");
-                    if (info.length == 6) {
-                        String todayStr = date.timestamp2str(Long.parseLong(info[5]), "yyyy-MM-dd");
-                        if (tdstr.equals(todayStr)) {
-                            insert.put("if_new", 1);
-                            Map<String, Map<String, Object>> data1 = new HashMap<String, Map<String, Object>>();
-                            data1.put("insert", insert);
-                            String sql1 = con.setSql("insert", tbname, data);
-                            sql1 = sql1 + " ON DUPLICATE KEY UPDATE " + update_sql;
-                            sqls.add(sql1);
+                    String sql = con.setSql("insert", tbname, data) + " ON DUPLICATE KEY UPDATE " + update_sql;
+                    sqls.add(sql);
+                    //判断是否为新用户
+                    String regkey = "greginfo-" + platform + "-" + game_abbr + "-" + server + "-" + uname;
+                    if (_jedis.exists(regkey)) {
+                        List userinfo = _jedis.lrange(regkey, 0, 0);
+                        String[] info = userinfo.get(0).toString().split("-");
+                        if (info.length == 6) {
+                            String todayStr = date.timestamp2str(Long.parseLong(info[5]), "yyyy-MM-dd");
+                            if (tdstr.equals(todayStr)) {
+                                insert.put("if_new", 1);
+                                Map<String, Map<String, Object>> data1 = new HashMap<String, Map<String, Object>>();
+                                data1.put("insert", insert);
+                                String sql1 = con.setSql("insert", tbname, data);
+                                sql1 = sql1 + " ON DUPLICATE KEY UPDATE " + update_sql;
+                                sqls.add(sql1);
+                            }
                         }
                     }
-                }
-                if (con.batchAdd(sqls)) {
-                    System.out.println("*********** Success ************");
+                    if (con.batchAdd(sqls)) {
+                        System.out.println("*********** Success ************");
+                    }
                 }
             }
         }
