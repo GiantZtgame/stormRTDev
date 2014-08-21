@@ -10,9 +10,7 @@ import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Tuple;
 import redis.clients.jedis.Jedis;
 import storm.qule_util.*;
-
 import java.util.*;
-import java.util.regex.Pattern;
 
 public class AdRealtimeBolt extends BaseBasicBolt {
     private Jedis _jedis;
