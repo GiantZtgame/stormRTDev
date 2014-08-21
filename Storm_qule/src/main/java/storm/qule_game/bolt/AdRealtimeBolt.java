@@ -70,12 +70,6 @@ public class AdRealtimeBolt extends BaseBasicBolt {
                         adplanning_id = param[3];
                         chunion_subid = idu;
                     }
-
-                    //date 当天0点时间戳
-                    String[] date1 = datetime.split(" ");
-                    if (date1.length == 2) {
-                        datetime = date1[0] + " 00:00:00";
-                    }
                     Long datestamp = date.str2timestamp(datetime);
                     String todayStr = date.timestamp2str(datestamp, "yyyyMMdd");
 
