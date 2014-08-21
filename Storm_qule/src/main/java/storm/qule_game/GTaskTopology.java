@@ -20,7 +20,7 @@ import java.io.IOException;
 public class GTaskTopology {
     public static void main(String[] args) throws /*Exception*/AlreadyAliveException, InvalidTopologyException, InterruptedException, IOException {
         TopologyBuilder builder = new TopologyBuilder();
-        builder.setBolt("gtask_bolt", new GTaskBolt()).shuffleGrouping("gtask_spout");
+        builder.setBolt("gtask_bolt", new GTaskBolt(), 16).shuffleGrouping("gtask_spout");
 
         Config conf = new Config();
         conf.setDebug(true);
@@ -46,7 +46,7 @@ public class GTaskTopology {
             SpoutConfig spoutConf = new SpoutConfig(zk, topic, zkRoot, spoutId);
             spoutConf.scheme = new SchemeAsMultiScheme(new StringScheme());
             builder.setSpout("gtask_spout", new KafkaSpout(spoutConf), 1);
-            conf.setNumWorkers(1);
+            conf.setNumWorkers(2);
             StormSubmitter.submitTopologyWithProgressBar(args[0], conf, builder.createTopology());
         //本地模式
         } else {

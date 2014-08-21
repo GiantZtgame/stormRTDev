@@ -21,7 +21,7 @@ import java.io.IOException;
 public class LvdistTopology {
     public static void main(String[] args) throws /*Exception*/AlreadyAliveException, InvalidTopologyException, InterruptedException, IOException {
         TopologyBuilder builder = new TopologyBuilder();
-        builder.setBolt("glvdist_bolt", new LvdistBolt()).shuffleGrouping("glvdist_spout");
+        builder.setBolt("glvdist_bolt", new LvdistBolt(), 6).shuffleGrouping("glvdist_spout");
 
         Config conf = new Config();
         conf.setDebug(true);
@@ -47,7 +47,7 @@ public class LvdistTopology {
             SpoutConfig spoutConf = new SpoutConfig(zk, topic, zkRoot, spoutId);
             spoutConf.scheme = new SchemeAsMultiScheme(new StringScheme());
             builder.setSpout("glvdist_spout", new KafkaSpout(spoutConf), 1);
-            conf.setNumWorkers(1);
+            conf.setNumWorkers(2);
             StormSubmitter.submitTopologyWithProgressBar(args[0], conf, builder.createTopology());
         //本地模式
         } else {
