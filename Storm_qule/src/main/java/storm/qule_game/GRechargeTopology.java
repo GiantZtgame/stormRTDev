@@ -23,7 +23,7 @@ import java.io.IOException;
 public class GRechargeTopology {
     public static void main(String[] args) throws /*Exception*/AlreadyAliveException, InvalidTopologyException, InterruptedException, IOException {
         TopologyBuilder builder = new TopologyBuilder();
-        builder.setBolt("grecharge_bolt", new GRechargeBolt()).shuffleGrouping("grecharge_spout");
+        builder.setBolt("grecharge_bolt", new GRechargeBolt(), 6).shuffleGrouping("grecharge_spout");
 
         Config conf = new Config();
         conf.setDebug(true);
@@ -48,7 +48,7 @@ public class GRechargeTopology {
             spoutConf.scheme = new SchemeAsMultiScheme(new StringScheme());
             builder.setSpout("grecharge_spout", new KafkaSpout(spoutConf), 1);
 
-            conf.setNumWorkers(1);
+            conf.setNumWorkers(2);
             StormSubmitter.submitTopologyWithProgressBar(args[0], conf, builder.createTopology());
         //本地模式
         } else {

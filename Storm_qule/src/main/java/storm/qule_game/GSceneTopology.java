@@ -15,7 +15,7 @@ import storm.qule_game.spout.SampleGSceneSpout;
 public class GSceneTopology {
     public static void main(String[] args) throws Exception {
         TopologyBuilder builder = new TopologyBuilder();
-        builder.setBolt("gscene_bolt", new GSceneBolt(), 5).shuffleGrouping("gscene_spout");
+        builder.setBolt("gscene_bolt", new GSceneBolt(), 10).shuffleGrouping("gscene_spout");
 
         Config conf = new Config();
         conf.setDebug(true);
@@ -40,7 +40,7 @@ public class GSceneTopology {
             spoutConfScene.scheme = new SchemeAsMultiScheme(new StringScheme());
             builder.setSpout("gscene_spout", new KafkaSpout(spoutConfScene), 1);
 
-            conf.setNumWorkers(1);
+            conf.setNumWorkers(2);
             StormSubmitter.submitTopologyWithProgressBar(args[0], conf, builder.createTopology());
         }
         else {

@@ -16,8 +16,8 @@ import storm.qule_game.spout.SampleGCurrencyPreserve;
 public class GCurrencyPreserveTopology {
     public static void main(String[] args) throws Exception {
         TopologyBuilder builder = new TopologyBuilder();
-        builder.setBolt("gcurrencypreserve_verify_bolt", new GCurrencyPreserveVeriBolt(), 1).shuffleGrouping("gcurrencypreserve_spout");
-        builder.setBolt("gcurrencypreserve_crud_bolt", new GCurrencyPreserveCRUDcBolt(), 1).shuffleGrouping("gcurrencypreserve_verify_bolt");
+        builder.setBolt("gcurrencypreserve_verify_bolt", new GCurrencyPreserveVeriBolt(), 4).shuffleGrouping("gcurrencypreserve_spout");
+        builder.setBolt("gcurrencypreserve_crud_bolt", new GCurrencyPreserveCRUDcBolt(), 4).shuffleGrouping("gcurrencypreserve_verify_bolt");
 
         Config conf = new Config();
         conf.setDebug(true);
@@ -42,7 +42,7 @@ public class GCurrencyPreserveTopology {
             spoutConfCurrencyPreserve.scheme = new SchemeAsMultiScheme(new StringScheme());
             builder.setSpout("gcurrencypreserve_spout", new KafkaSpout(spoutConfCurrencyPreserve), 1);
 
-            conf.setNumWorkers(1);
+            conf.setNumWorkers(2);
             StormSubmitter.submitTopologyWithProgressBar(args[0], conf, builder.createTopology());
         }
         else {

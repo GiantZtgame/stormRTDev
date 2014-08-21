@@ -49,7 +49,7 @@ public class GOnlineTopology {
             conf.put("isOnline",true);
             builder.setSpout("gonline_spout", new KafkaSpout(spoutConf), 1);
 
-            conf.setNumWorkers(1);
+            conf.setNumWorkers(2);
             StormSubmitter.submitTopologyWithProgressBar(args[0], conf, builder.createTopology());
         } else {
             conf.put("isOnline",false);

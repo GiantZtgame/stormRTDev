@@ -16,8 +16,8 @@ public class GDailyRemainTopology {
     public static void main(String[]    args) throws Exception {
         TopologyBuilder builder = new TopologyBuilder();
 
-        builder.setBolt("dremain_verify_bolt", new GLoginVeriBolt(), 1).shuffleGrouping("dailyremain_spout");
-        builder.setBolt("dremain_calc_bolt", new GDailyRemainBolt(), 1).shuffleGrouping("dremain_verify_bolt");
+        builder.setBolt("dremain_verify_bolt", new GLoginVeriBolt(), 10).shuffleGrouping("dailyremain_spout");
+        builder.setBolt("dremain_calc_bolt", new GDailyRemainBolt(), 10).shuffleGrouping("dremain_verify_bolt");
 
         Config conf = new Config();
         conf.setDebug(true);
@@ -42,7 +42,7 @@ public class GDailyRemainTopology {
             spoutConfLogin.scheme = new SchemeAsMultiScheme(new StringScheme());
             builder.setSpout("dailyremain_spout", new KafkaSpout(spoutConfLogin), 1);
 
-            conf.setNumWorkers(1);
+            conf.setNumWorkers(2);
             StormSubmitter.submitTopologyWithProgressBar(args[0], conf, builder.createTopology());
         }
         else {

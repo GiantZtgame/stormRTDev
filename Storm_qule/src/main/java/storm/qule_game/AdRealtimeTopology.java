@@ -17,7 +17,7 @@ import java.io.IOException;
 public class AdRealtimeTopology {
     public static void main(String[] args) throws /*Exception*/AlreadyAliveException, InvalidTopologyException, InterruptedException, IOException {
         TopologyBuilder builder = new TopologyBuilder();
-        builder.setBolt("adrealtime_bolt", new AdRealtimeBolt()).shuffleGrouping("adrealtime_spout");
+        builder.setBolt("adrealtime_bolt", new AdRealtimeBolt(), 16).shuffleGrouping("adrealtime_spout");
 
         Config conf = new Config();
         conf.setDebug(true);
@@ -42,7 +42,7 @@ public class AdRealtimeTopology {
             SpoutConfig spoutConf = new SpoutConfig(zk, topic, zkRoot, spoutId);
             spoutConf.scheme = new SchemeAsMultiScheme(new StringScheme());
             builder.setSpout("adrealtime_spout", new KafkaSpout(spoutConf), 1);
-            conf.setNumWorkers(1);
+            conf.setNumWorkers(2);
             StormSubmitter.submitTopologyWithProgressBar(args[0], conf, builder.createTopology());
         //本地模式
         } else {
