@@ -42,7 +42,7 @@ public class GDailyRemainTopology {
             spoutConfLogin.scheme = new SchemeAsMultiScheme(new StringScheme());
             builder.setSpout("dailyremain_spout", new KafkaSpout(spoutConfLogin), 1);
 
-            conf.setNumWorkers(1);
+            conf.setNumWorkers(2);
             StormSubmitter.submitTopologyWithProgressBar(args[0], conf, builder.createTopology());
         }
         else {

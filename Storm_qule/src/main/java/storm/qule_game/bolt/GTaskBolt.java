@@ -89,7 +89,7 @@ public class GTaskBolt extends BaseBasicBolt {
                     String PSG = platform + ":" + server + ":" + game_abbr;
                     System.out.println("======================");
                     //接收任务
-                    //AHSG|100|1|xxxxx|2013-11-25 08:34:48|task_recv|100101|z632954401|亂世逍遙|1
+                    //AHSG|100|1|08dffed798bf0fd8efaf167814e17460|2013-11-25 08:34:48|task_recv|100101|z632954401|亂世逍遙|1
                     if (keywords.equals("task_recv") && logs.length == 10) {
                         uname = logs[7];
                         cname = logs[8];
@@ -100,7 +100,7 @@ public class GTaskBolt extends BaseBasicBolt {
                         System.out.println("接收任务人数：" + proc1);
                     }
                     //更新任务
-                    //AHSG|100|1|xxxxx|2013-11-25 08:34:48|task_update|100101|2|z632954401|亂世逍遙|3
+                    //AHSG|100|1|08dffed798bf0fd8efaf167814e17460|2013-11-25 08:34:48|task_update|100101|2|z632954401|亂世逍遙|3
                     else if (keywords.equals("task_update") && logs.length == 11) {
                         String steps = logs[7];
                         uname = logs[8];
@@ -112,7 +112,7 @@ public class GTaskBolt extends BaseBasicBolt {
                         System.out.println("更新至" + steps + "步人数 : " + update);
                     }
                     //完成任务
-                    //AHSG|100|1|xxxxx|2013-11-25 08:34:48|task_fin|100101|z632954401|亂世逍遙|5
+                    //AHSG|100|1|08dffed798bf0fd8efaf167814e17460|2013-11-25 08:34:48|task_fin|100101|z632954401|亂世逍遙|5
                     else if (keywords.equals("task_fin") && logs.length == 10) {
                         uname = logs[7];
                         cname = logs[8];
