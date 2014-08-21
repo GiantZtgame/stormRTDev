@@ -19,23 +19,23 @@ public class GpLoginTopology {
     public static void main(String[] args) throws Exception {
         TopologyBuilder builder = new TopologyBuilder();
         //请求登录
-        builder.setBolt("gloginreq_verify_bolt", new GLoginreqVeriBolt(), 1).shuffleGrouping("gloginreq_spout");
-        builder.setBolt("gloginreq_calc_bolt", new GLoginreqCalcBolt(), 1).shuffleGrouping("gloginreq_verify_bolt");
+        builder.setBolt("gloginreq_verify_bolt", new GLoginreqVeriBolt(), 10).shuffleGrouping("gloginreq_spout");
+        builder.setBolt("gloginreq_calc_bolt", new GLoginreqCalcBolt(), 10).shuffleGrouping("gloginreq_verify_bolt");
 
         //登录
-        builder.setBolt("glogin_verify_bolt", new GLoginVeriBolt(), 1).shuffleGrouping("glogin_spout");
-        builder.setBolt("glogin_calc_bolt", new GLoginCalcBolt(), 1).shuffleGrouping("glogin_verify_bolt");
+        builder.setBolt("glogin_verify_bolt", new GLoginVeriBolt(), 10).shuffleGrouping("glogin_spout");
+        builder.setBolt("glogin_calc_bolt", new GLoginCalcBolt(), 10).shuffleGrouping("glogin_verify_bolt");
         //广告登录
-        builder.setBolt("glogin_adthru_calc_bolt", new GAdthruLoginCalcBolt(), 1).fieldsGrouping("glogin_verify_bolt", new Fields("game_abbr", "platform_id", "server_id"));
-        builder.setBolt("glogin_adthru_crud_bolt", new GAdthruLoginCRUDBolt(), 1).fieldsGrouping("glogin_adthru_calc_bolt", new Fields("game_abbr"));
+        builder.setBolt("glogin_adthru_calc_bolt", new GAdthruLoginCalcBolt(), 6).fieldsGrouping("glogin_verify_bolt", new Fields("game_abbr", "platform_id", "server_id"));
+        builder.setBolt("glogin_adthru_crud_bolt", new GAdthruLoginCRUDBolt(), 6).fieldsGrouping("glogin_adthru_calc_bolt", new Fields("game_abbr"));
 
         //建角
-        builder.setBolt("greg_verify_bolt", new GRegVeriBolt(), 1).shuffleGrouping("greg_spout");
-        builder.setBolt("greg_calc_bolt", new GRegCalcBolt(), 1).fieldsGrouping("greg_verify_bolt", new Fields("game_abbr", "platform_id", "server_id"));
-        builder.setBolt("greg_crud_bolt", new GRegCRUDBolt(), 1).fieldsGrouping("greg_calc_bolt", new Fields("game_abbr"));
+        builder.setBolt("greg_verify_bolt", new GRegVeriBolt(), 6).shuffleGrouping("greg_spout");
+        builder.setBolt("greg_calc_bolt", new GRegCalcBolt(), 6).fieldsGrouping("greg_verify_bolt", new Fields("game_abbr", "platform_id", "server_id"));
+        builder.setBolt("greg_crud_bolt", new GRegCRUDBolt(), 6).fieldsGrouping("greg_calc_bolt", new Fields("game_abbr"));
         //广告建角
-        builder.setBolt("greg_adthru_calc_bolt", new GAdthruGRegCalcBolt(), 1).fieldsGrouping("greg_verify_bolt", new Fields("game_abbr", "platform_id", "server_id"));
-        builder.setBolt("greg_adthru_crud_bolt", new GAdthruGRegCRUDBolt(), 1).fieldsGrouping("greg_adthru_calc_bolt", new Fields("game_abbr"));
+        builder.setBolt("greg_adthru_calc_bolt", new GAdthruGRegCalcBolt(), 6).fieldsGrouping("greg_verify_bolt", new Fields("game_abbr", "platform_id", "server_id"));
+        builder.setBolt("greg_adthru_crud_bolt", new GAdthruGRegCRUDBolt(), 6).fieldsGrouping("greg_adthru_calc_bolt", new Fields("game_abbr"));
 
         Config conf = new Config();
         conf.setDebug(true);
@@ -72,7 +72,7 @@ public class GpLoginTopology {
             spoutConfReg.scheme = new SchemeAsMultiScheme(new StringScheme());
             builder.setSpout("greg_spout", new KafkaSpout(spoutConfReg), 1);
 
-            conf.setNumWorkers(1);
+            conf.setNumWorkers(2);
             StormSubmitter.submitTopologyWithProgressBar(args[0], conf, builder.createTopology());
         }
         else {
