@@ -77,8 +77,9 @@ public class GAdthruLoginCRUDBolt extends BaseBasicBolt {
                 "`platform` mediumint(5) unsigned NOT NULL, `server` mediumint(5) unsigned NOT NULL, `uname` char(128) CHARACTER SET utf8 NOT NULL, " +
                 "`adplanning_id` int(11) unsigned NOT NULL, `chunion_subid` int(11) unsigned NOT NULL DEFAULT 0, PRIMARY KEY (`id`), " +
                 "UNIQUE KEY (`platform`, `server`, `uname`)) ENGINE=MyISAM DEFAULT CHARSET=utf8;", adp_charlogin_tbname);
-        String ins_adp_charlogin_sql = String.format("INSERT INTO %s (platform, server, uname, adplanning_id, chunion_subid) VALUES (%s, %s, '%s', %s, %s);",
-                adp_charlogin_tbname, platform_id, server_id, uname, adplanning_id, chunion_subid);
+        String ins_adp_charlogin_sql = String.format("INSERT INTO %s (platform, server, uname, adplanning_id, chunion_subid) VALUES (%s, %s, '%s', %s, %s) " +
+                        "ON DUPLICATE KEY UPDATE adplanning_id=%s;",
+                adp_charlogin_tbname, platform_id, server_id, uname, adplanning_id, chunion_subid, adplanning_id);
 
         //flush to mysql
         String mysql_host = _prop.getProperty("game." + game_abbr + ".mysql_host");
