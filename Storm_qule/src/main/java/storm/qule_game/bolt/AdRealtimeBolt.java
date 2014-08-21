@@ -73,30 +73,33 @@ public class AdRealtimeBolt extends BaseBasicBolt {
                     Long datestamp = date.str2timestamp(datetime);
                     String todayStr = date.timestamp2str(datestamp, "yyyyMMdd");
 
-                    //唯一键
-                    String PSG = platform + ":" + server + ":" + game_abbr;
+                    //adrealtime
+                    String REAL = adplanning_id + ":" +chunion_subid;
+                    //adref
+                    String REF = platform + ":" + server + ":" + adplanning_id + ":" +chunion_subid;
+
                     //redis key
-                    String r_adreg_5m = "adreg:" + PSG + ":5m:incr";
-                    String r_adreg_1h = "adreg:" + PSG + ":1h:incr";
+                    String r_adreg_5m = "adreg:" + REAL + ":5m:incr";
+                    String r_adreg_1h = "adreg:" + REAL + ":1h:incr";
 
-                    String r_adex_ip_5m = "adex:" + PSG + ":ip:5m:set";
-                    String r_adex_ip_1h = "adex:" + PSG + ":ip:1h:set";
-                    String r_adex_pv_5m = "adex:" + PSG + ":pv:5m:incr";
-                    String r_adex_pv_1h = "adex:" + PSG + ":pv:1h:incr";
-                    String r_adex_ip_td = "adex:" + PSG + ":ip:" + todayStr + ":set";
-                    String r_adex_pv_td = "adex:" + PSG + ":pv:" + todayStr + ":incr";
+                    String r_adex_ip_5m = "adex:" + REAL + ":ip:5m:set";
+                    String r_adex_ip_1h = "adex:" + REAL + ":ip:1h:set";
+                    String r_adex_pv_5m = "adex:" + REAL + ":pv:5m:incr";
+                    String r_adex_pv_1h = "adex:" + REAL + ":pv:1h:incr";
+                    String r_adex_ip_td = "adex:" + REF + ":ip:" + todayStr + ":set";
+                    String r_adex_pv_td = "adex:" + REF + ":pv:" + todayStr + ":incr";
 
-                    String r_adloading_ip_td = "adloading:" + PSG + ":ip:" + todayStr + ":set";
-                    String r_adloading_pv_td = "adloading:" + PSG + ":pv:" + todayStr + ":incr";
+                    String r_adloading_ip_td = "adloading:" + REF + ":ip:" + todayStr + ":set";
+                    String r_adloading_pv_td = "adloading:" + REF + ":pv:" + todayStr + ":incr";
 
-                    String r_adpost_ip_td = "adpost:" + PSG + ":ip:" + todayStr + ":set";
-                    String r_adpost_pv_td = "adpost:" + PSG + ":pv:" + todayStr + ":incr";
+                    String r_adpost_ip_td = "adpost:" + REF + ":ip:" + todayStr + ":set";
+                    String r_adpost_pv_td = "adpost:" + REF + ":pv:" + todayStr + ":incr";
 
-                    String r_adclick_ip_td = "adclick:" + PSG + ":ip:" + todayStr + ":set";
-                    String r_adclick_pv_td = "adclick:" + PSG + ":pv:" + todayStr + ":incr";
+                    String r_adclick_ip_td = "adclick:" + REF + ":ip:" + todayStr + ":set";
+                    String r_adclick_pv_td = "adclick:" + REF + ":pv:" + todayStr + ":incr";
 
-                    String r_adarrive_ip_td = "adarrive:" + PSG + ":ip:" + todayStr + ":set";
-                    String r_adarrive_pv_td = "adarrive:" + PSG + ":pv:" + todayStr + ":incr";
+                    String r_adarrive_ip_td = "adarrive:" + REF + ":ip:" + todayStr + ":set";
+                    String r_adarrive_pv_td = "adarrive:" + REF + ":pv:" + todayStr + ":incr";
 
                     //注册
                     //记录5分钟和1小时时间段注册人数
@@ -273,7 +276,6 @@ public class AdRealtimeBolt extends BaseBasicBolt {
                         insert_5m.put("characters", 0);
                         insert_5m.put("ip", adex_ip_5m);
                         insert_5m.put("pv", adex_pv_5m);
-
                         insert_1h.put("adplanning_id", adplanning_id);
                         insert_1h.put("chunion_subid", chunion_subid);
                         insert_1h.put("datetime", tis_datetime_1h);
@@ -286,7 +288,6 @@ public class AdRealtimeBolt extends BaseBasicBolt {
                         update_5m.put("p_reg", adreg_5m);
                         update_5m.put("ip", adex_ip_5m);
                         update_5m.put("pv", adex_pv_5m);
-
                         update_1h.put("p_reg", adreg_1h);
                         update_1h.put("ip", adex_ip_1h);
                         update_1h.put("pv", adex_pv_1h);
