@@ -75,9 +75,10 @@ public class LvdistBolt extends BaseBasicBolt {
                     if (token_gen.equals(token)) {
 
                         //redis key
-                        String lvdist_key = "lvdist:" + platform + ":" + server + ":" + game_abbr + ":hash";
+                        String PSG = platform + ":" + server + ":" + game_abbr;
+                        String lvdist_key = "lvdist:" + PSG + ":hash";
 
-                        System.out.println("===============等级分布==============");
+                        System.out.println("============="+PSG+":lvdist==============");
                         for (String list : lvdists) {
                             String[] data = list.split(":");
                             if (data.length == 2) {
