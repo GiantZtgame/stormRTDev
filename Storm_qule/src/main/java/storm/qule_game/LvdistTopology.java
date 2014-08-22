@@ -48,7 +48,6 @@ public class LvdistTopology {
             spoutConf.scheme = new SchemeAsMultiScheme(new StringScheme());
             builder.setSpout("glvdist_spout", new KafkaSpout(spoutConf), 1);
             conf.setNumWorkers(2);
-            //conf.setMaxTaskParallelism();
 
             StormSubmitter.submitTopologyWithProgressBar(args[0], conf, builder.createTopology());
         //本地模式
