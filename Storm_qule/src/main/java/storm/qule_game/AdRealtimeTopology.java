@@ -11,13 +11,18 @@ import backtype.storm.spout.SchemeAsMultiScheme;
 import backtype.storm.topology.TopologyBuilder;
 import storm.kafka.*;
 import storm.qule_game.bolt.AdRealtimeBolt;
+import storm.qule_game.bolt.AdRealtimeCalcBolt;
+import storm.qule_game.bolt.AdRealtimeVeriBolt;
+import storm.qule_game.bolt.AdRefBolt;
 import storm.qule_game.spout.AdRealtimeSpout;
 
 import java.io.IOException;
 public class AdRealtimeTopology {
     public static void main(String[] args) throws /*Exception*/AlreadyAliveException, InvalidTopologyException, InterruptedException, IOException {
         TopologyBuilder builder = new TopologyBuilder();
-        builder.setBolt("adrealtime_bolt", new AdRealtimeBolt()).shuffleGrouping("adrealtime_spout");
+        builder.setBolt("adrealtime_veri_bolt", new AdRealtimeVeriBolt()).shuffleGrouping("adrealtime_spout");
+        builder.setBolt("adrealtime_calc_bolt", new AdRealtimeCalcBolt()).shuffleGrouping("adrealtime_veri_bolt");
+        builder.setBolt("adref_bolt", new AdRefBolt()).shuffleGrouping("adrealtime_veri_bolt");
 
         Config conf = new Config();
         conf.setDebug(true);
