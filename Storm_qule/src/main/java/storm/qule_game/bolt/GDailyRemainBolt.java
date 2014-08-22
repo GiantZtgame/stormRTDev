@@ -90,7 +90,7 @@ public class GDailyRemainBolt extends BaseBasicBolt {
                             _jedis.expire(addailyremain, 24 * 60 * 60);
                         }
                         String data1 = _jedis.exists(addailyremain) ? _jedis.get(addailyremain) : "0";
-                        String adsql = "INSERT INTO `adplanning_dailyremain` (`adplanning_id`,`chunion_subid`,`platform`,`server`,`date`,`day" + day + "`) VALUES(" + adplanning_id + "," + chunion_subid + ","+platform_id + "," + server_id + "," + datestamp + "," + data1 +
+                        String adsql = "INSERT INTO `adplanning_dailyRemain` (`adplanning_id`,`chunion_subid`,`platform`,`server`,`date`,`day" + day + "`) VALUES(" + adplanning_id + "," + chunion_subid + ","+platform_id + "," + server_id + "," + datestamp + "," + data1 +
                                 ") ON DUPLICATE KEY UPDATE `day" + day + "` = " + data1;
                         sqls.add(adsql);
                     }
