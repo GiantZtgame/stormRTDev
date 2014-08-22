@@ -42,13 +42,14 @@ public class AdRealtimeCalcBolt extends BaseBasicBolt {
         //refresh gamecfg
         _prop = _gamecfgLoader.loadCfg(_gamecfg, _prop);
 
-        //"game_abbr","platform","server","todayStr","keywords","adplanning_id","chunion_subid","ip"
+        //"game_abbr","platform","server","todayStr","keywords","adplanning_id","chunion_subid","ip","uname"
         String game_abbr = tuple.getStringByField("game_abbr");
         String todayStr = tuple.getStringByField("todayStr");
         String keywords = tuple.getStringByField("keywords");
         String adplanning_id = tuple.getStringByField("adplanning_id");
         String chunion_subid = tuple.getStringByField("chunion_subid");
         String ip = tuple.getStringByField("ip");
+        String uname = tuple.getStringByField("uname");
 
         Long nowtime = System.currentTimeMillis() / 1000;
         Long tis_datetime_5m = nowtime - nowtime % 300;
@@ -56,18 +57,19 @@ public class AdRealtimeCalcBolt extends BaseBasicBolt {
         //adrealtime
         String REAL = adplanning_id + ":" +chunion_subid;
         //redis key
-        String r_adreg_5m = "adreg:" + REAL +":" + tis_datetime_5m+ ":5m:incr";
-        String r_adreg_1h = "adreg:" + REAL +":" + tis_datetime_1h+ ":1h:incr";
-        String r_adex_ip_5m = "adex:" + REAL +":" + tis_datetime_5m+ ":ip:5m:set";
-        String r_adex_ip_1h = "adex:" + REAL +":" + tis_datetime_1h+ ":ip:1h:set";
-        String r_adex_pv_5m = "adex:" + REAL +":" + tis_datetime_5m+ ":pv:5m:incr";
-        String r_adex_pv_1h = "adex:" + REAL +":" + tis_datetime_1h+ ":pv:1h:incr";
+        String r_adreg_5m = "adreg:" + REAL +":" + tis_datetime_5m+ ":incr";
+        String r_adreg_1h = "adreg:" + REAL +":" + tis_datetime_1h+ ":incr";
+        String r_adex_ip_5m = "adex:" + REAL +":" + tis_datetime_5m+ ":ip:set";
+        String r_adex_ip_1h = "adex:" + REAL +":" + tis_datetime_1h+ ":ip:set";
+        String r_adex_pv_5m = "adex:" + REAL +":" + tis_datetime_5m+ ":pv:incr";
+        String r_adex_pv_1h = "adex:" + REAL +":" + tis_datetime_1h+ ":pv:incr";
 
         //注册
         //记录5分钟和1小时时间段注册人数
         if (keywords.equals("adreg")) {
-            _jedis.incr(r_adreg_5m);
-            _jedis.incr(r_adreg_1h);
+            _jedis.sadd(r_adreg_5m,uname);
+            _jedis.sadd(r_adreg_1h,uname);
+
             _jedis.expire(r_adreg_5m,5*60);
             _jedis.expire(r_adreg_1h,60*60);
         }
@@ -86,8 +88,8 @@ public class AdRealtimeCalcBolt extends BaseBasicBolt {
             _jedis.expire(r_adex_ip_1h,60*60);
         }
 
-        String adreg_5m = _jedis.exists(r_adreg_5m) ? _jedis.get(r_adreg_5m) : "0";
-        String adreg_1h = _jedis.exists(r_adreg_1h) ? _jedis.get(r_adreg_1h) : "0";
+        Long adreg_5m = _jedis.exists(r_adreg_5m) ? _jedis.scard(r_adreg_5m) : 0l;
+        Long adreg_1h = _jedis.exists(r_adreg_1h) ? _jedis.scard(r_adreg_1h) : 0l;
 
         String adex_pv_5m = _jedis.exists(r_adex_pv_5m) ? _jedis.get(r_adex_pv_5m) : "0";
         String adex_pv_1h = _jedis.exists(r_adex_pv_1h) ? _jedis.get(r_adex_pv_1h) : "0";
@@ -104,6 +106,10 @@ public class AdRealtimeCalcBolt extends BaseBasicBolt {
         System.out.println("======================================");
 
         //数据库60s更新一次
+        Long uptime = date.str2timestamp(todayStr+" 23:59:00");
+        if (nowtime > uptime) {
+            _jedis.del("timer:adrealtime:60s");
+        }
         if (!_jedis.exists("timer:adrealtime:60s")) {
             String host = _prop.getProperty("game." + game_abbr + ".mysql_host");
             String port = _prop.getProperty("game." + game_abbr + ".mysql_port");
@@ -177,7 +183,7 @@ public class AdRealtimeCalcBolt extends BaseBasicBolt {
             sqls.add(sql_1h);
             if (con.batchAdd(sqls)) {
                 System.out.println("******* Success ********");
-                //_jedis.setex("timer:adrealtime:60s", 60, "1");
+                _jedis.setex("timer:adrealtime:60s", 60, "1");
             }
         }
 

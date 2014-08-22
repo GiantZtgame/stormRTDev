@@ -44,7 +44,7 @@ public class AdRefBolt extends BaseBasicBolt {
         //refresh gamecfg
         _prop = _gamecfgLoader.loadCfg(_gamecfg, _prop);
 
-        //"game_abbr","platform","server","logtime","keywords","adplanning_id","chunion_subid","ip"
+        //"game_abbr","platform","server","logtime","keywords","adplanning_id","chunion_subid","ip","uname"
         String game_abbr = tuple.getStringByField("game_abbr");
         String platform = tuple.getStringByField("platform");
         String server = tuple.getStringByField("server");
@@ -140,6 +140,11 @@ public class AdRefBolt extends BaseBasicBolt {
         System.out.println("======================================");
 
         //数据库60s更新一次
+        Long nowtime = System.currentTimeMillis() / 1000;
+        Long uptime = date.str2timestamp(todayStr+" 23:59:00");
+        if (nowtime > uptime) {
+            _jedis.del("timer:adrealtime:60s");
+        }
         if (!_jedis.exists("timer:adrealtime:60s")) {
             String host = _prop.getProperty("game." + game_abbr + ".mysql_host");
             String port = _prop.getProperty("game." + game_abbr + ".mysql_port");
@@ -192,7 +197,7 @@ public class AdRefBolt extends BaseBasicBolt {
             String sql = con.setSql("replace", tbname, data);
             if (con.add(sql)) {
                 System.out.println("******* Success ********");
-                //_jedis.setex("timer:adrealtime:60s", 60, "1");
+                _jedis.setex("timer:adrealtime:60s", 60, "1");
             }
 
         }

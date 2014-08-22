@@ -57,7 +57,9 @@ public class AdRealtimeVeriBolt extends BaseBasicBolt {
                 String ida = logs[5];
                 String idu = logs[6];
                 String ip = logs[7];
+                String uname = "a";
                 if (keywords.equals("adreg")) {
+                    uname = logs[7];
                     ip = logs[8];
                 }
                 String host = _prop.getProperty("game." + game_abbr + ".mysql_host");
@@ -71,12 +73,12 @@ public class AdRealtimeVeriBolt extends BaseBasicBolt {
                     }
                     //logtime 2013-11-25 08:34:48
                     String todayStr = date.timestamp2str(date.str2timestamp(logtime), "yyyyMMdd");
-                    collector.emit(new Values(game_abbr, platform, server, todayStr,keywords,adplanning_id,chunion_subid,ip));
+                    collector.emit(new Values(game_abbr, platform, server, todayStr,keywords,adplanning_id,chunion_subid,ip,uname));
                 }
             }
         }
     }
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("game_abbr","platform","server","todayStr","keywords","adplanning_id","chunion_subid","ip"));
+        declarer.declare(new Fields("game_abbr","platform","server","todayStr","keywords","adplanning_id","chunion_subid","ip","uname"));
     }
 }
