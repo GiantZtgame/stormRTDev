@@ -108,6 +108,17 @@ public class GTaskBolt extends BaseBasicBolt {
                         String update_key = "task:" + PSG + ":" + task_id + ":update:" + steps + ":set";
                         _jedis.sadd(update_key, cname);
                         Long update = _jedis.scard(update_key);
+                        switch (Integer.parseInt(steps)) {
+                            case 2: proc2 = update;
+                            case 3: proc3 = update;
+                            case 4: proc4 = update;
+                            case 5: proc5 = update;
+                            case 6: proc6 = update;
+                            case 7: proc7 = update;
+                            case 8: proc8 = update;
+                            case 9: proc9 = update;
+                            case 10: proc10 = update;
+                        }
                         update_sql = "`proc" + steps + "`=" + update;
                         System.out.println("更新至" + steps + "步人数 : " + update);
                     }
