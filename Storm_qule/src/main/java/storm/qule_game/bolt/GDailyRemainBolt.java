@@ -84,7 +84,13 @@ public class GDailyRemainBolt extends BaseBasicBolt {
                     String adplanning_id = gadinfo.get(2);
                     String chunion_subid = gadinfo.get(3);
                     if (Integer.parseInt(adplanning_id) > 0) {
-                        String adsql = "INSERT INTO `adplanning_dailyremain` (`adplanning_id`,`chunion_subid`,`platform`,`server`,`date`,`day" + day + "`) VALUES(" + adplanning_id + "," + chunion_subid + ","+platform_id + "," + server_id + "," + datestamp + "," + data +
+                        String addailyremain = "addailyremain:" + adplanning_id + ":" + chunion_subid + ":" + todayStr + ":" + i + ":incr";
+                        if (_jedis.sismember(someday_char, uname)) {
+                            _jedis.incr(addailyremain);
+                            _jedis.expire(addailyremain, 24 * 60 * 60);
+                        }
+                        String data1 = _jedis.exists(addailyremain) ? _jedis.get(addailyremain) : "0";
+                        String adsql = "INSERT INTO `adplanning_dailyremain` (`adplanning_id`,`chunion_subid`,`platform`,`server`,`date`,`day" + day + "`) VALUES(" + adplanning_id + "," + chunion_subid + ","+platform_id + "," + server_id + "," + datestamp + "," + data1 +
                                 ") ON DUPLICATE KEY UPDATE `day" + day + "` = " + data;
                         sqls.add(adsql);
                     }
