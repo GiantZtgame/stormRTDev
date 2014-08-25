@@ -44,7 +44,7 @@ public class AdRefBolt extends BaseBasicBolt {
         //refresh gamecfg
         _prop = _gamecfgLoader.loadCfg(_gamecfg, _prop);
 
-        //"game_abbr","platform","server","logtime","keywords","adplanning_id","chunion_subid","ip","uname"
+        //[AHSG, 100, 1, 2013-11-25 08:34:48, adreg, 100, 0, 127.0.0.1, a]
         String game_abbr = tuple.getStringByField("game_abbr");
         String platform = tuple.getStringByField("platform");
         String server = tuple.getStringByField("server");
@@ -119,19 +119,20 @@ public class AdRefBolt extends BaseBasicBolt {
         }
 
         String adex_pv = _jedis.exists(r_adex_pv_td) ? _jedis.get(r_adex_pv_td) : "0";
-        Long adex_ip = _jedis.exists(r_adex_ip_td) ? _jedis.scard(r_adex_ip_td) : 0l;
+        Long adex_ip = _jedis.scard(r_adex_ip_td);
 
         String adloading_pv = _jedis.exists(r_adloading_pv_td) ? _jedis.get(r_adloading_pv_td) : "0";
-        Long adloading_ip = _jedis.exists(r_adloading_ip_td) ? _jedis.scard(r_adloading_ip_td) : 0l;
+        Long adloading_ip = _jedis.scard(r_adloading_ip_td);
 
         String adpost_pv = _jedis.exists(r_adpost_pv_td) ? _jedis.get(r_adpost_pv_td) : "0";
-        Long adpost_ip = _jedis.exists(r_adpost_ip_td) ? _jedis.scard(r_adpost_ip_td) : 0l;
+        Long adpost_ip = _jedis.scard(r_adpost_ip_td);
 
         String adclick_pv = _jedis.exists(r_adclick_pv_td) ? _jedis.get(r_adclick_pv_td) : "0";
-        Long adclick_ip = _jedis.exists(r_adclick_ip_td) ? _jedis.scard(r_adclick_ip_td) : 0l;
+        Long adclick_ip = _jedis.scard(r_adclick_ip_td);
 
         String adarrive_pv = _jedis.exists(r_adarrive_pv_td) ? _jedis.get(r_adarrive_pv_td) : "0";
-        Long adarrive_ip = _jedis.exists(r_adarrive_ip_td) ? _jedis.scard(r_adarrive_ip_td) : 0l;
+        Long adarrive_ip = _jedis.scard(r_adarrive_ip_td);
+
         System.out.println("广告弹出pv：" + adex_pv + "    广告弹出ip：" + adex_ip);
         System.out.println("广告加载pv：" + adloading_pv + "    广告加载ip：" + adloading_ip);
         System.out.println("广告完展pv：" + adpost_pv + "    广告完展ip：" + adpost_ip);
@@ -139,67 +140,33 @@ public class AdRefBolt extends BaseBasicBolt {
         System.out.println("页面到达pv：" + adarrive_pv + "    页面到达ip：" + adarrive_ip);
         System.out.println("==========================================");
 
-        //数据库60s更新一次
+        //数据库5m更新一次
         Long nowtime = System.currentTimeMillis() / 1000;
-        Long uptime = date.str2timestamp(todayStr+" 23:59:00");
+        Long uptime = date.str2timestamp(todayStr+" 23:55:00");
         if (nowtime > uptime) {
-            _jedis.del("timer:adrealtime:60s");
+            _jedis.del("timer:adrealtime:5m");
         }
-        if (!_jedis.exists("timer:adrealtime:60s")) {
+        if (!_jedis.exists("timer:adrealtime:5m")) {
             String host = _prop.getProperty("game." + game_abbr + ".mysql_host");
             String port = _prop.getProperty("game." + game_abbr + ".mysql_port");
             String db = _prop.getProperty("game." + game_abbr + ".mysql_db");
             String user = _prop.getProperty("game." + game_abbr + ".mysql_user");
             String passwd = _prop.getProperty("game." + game_abbr + ".mysql_passwd");
-
             Long up_time = System.currentTimeMillis() / 1000;
             JdbcMysql con = JdbcMysql.getInstance(game_abbr, host, port, db, user, passwd);
-
-            //===================================表platform_adref_today=======================================//
-
-            String tbname = "platform_adref_today";
-            Map<String, Object> insert = new HashMap<String, Object>();
-            Map<String, Object> update = new HashMap<String, Object>();
-
-            insert.put("adplanning_id", adplanning_id);
-            insert.put("chunion_subid", chunion_subid);
-            insert.put("platform", platform);
-            insert.put("server", server);
-            insert.put("date", todayStamp);
-            insert.put("up_time", up_time);
-            insert.put("ad_hit", adclick_pv);
-            insert.put("ad_hit_ip", adclick_ip);
-            insert.put("landing", adarrive_pv);
-            insert.put("landing_ip", adarrive_ip);
-            insert.put("pv_ex", adex_pv);
-            insert.put("ip_ex", adex_ip);
-            insert.put("pv_load", adloading_pv);
-            insert.put("ip_load", adloading_ip);
-            insert.put("pv_post", adpost_pv);
-            insert.put("ip_post", adpost_ip);
-
-            update.put("up_time", up_time);
-            update.put("ad_hit", adclick_pv);
-            update.put("ad_hit_ip", adclick_ip);
-            update.put("landing", adarrive_pv);
-            update.put("landing_ip", adloading_ip);
-            update.put("pv_ex", adex_pv);
-            update.put("ip_ex", adex_ip);
-            update.put("pv_load", adloading_pv);
-            update.put("ip_load", adloading_ip);
-            update.put("pv_post", adpost_pv);
-            update.put("ip_post", adpost_ip);
-
-            Map<String, Map<String, Object>> data = new HashMap<String, Map<String, Object>>();
-            data.put("insert", insert);
-            data.put("update", update);
-
-            String sql = con.setSql("replace", tbname, data);
+            String sql = "INSERT INTO `platform_adref_today` (`adplanning_id`, `chunion_subid`," +
+                    " `platform`, `server`, `date`, `up_time`, `ad_hit`,`ad_hit_ip`,`landing`, `landing_ip`," +
+                    "`pv_ex`, `ip_ex`, `pv_load`, `ip_load`,`pv_post`,`ip_post`) VALUES (" + adplanning_id + ", " +
+                    chunion_subid + ", " + platform + "," + server + ", '" + todayStamp + "', " + up_time + ", " + adclick_pv + "," +
+                    adclick_ip + " , " + adloading_pv + ", " + adloading_ip + ", " + adex_pv + ", " + adex_ip + "," +
+                    adarrive_pv + ", " + adarrive_ip + "," + adpost_pv + ", " + adpost_ip + " ) ON DUPLICATE KEY UPDATE " +
+                    "`up_time`=" + up_time + ",`ad_hit`=" + adclick_pv + ",`ad_hit_ip`=" + adclick_ip + ",`landing`=" + adloading_pv +
+                    ",`landing_ip`=" + adloading_ip + ",`pv_ex`=" + adex_pv + ",`ip_ex`=" + adex_ip + ",`pv_load`=" + adarrive_pv +
+                    ",`ip_load`=" + adarrive_ip + ",`pv_post`=" + adpost_pv + ",`ip_post`=" + adpost_ip;
             if (con.add(sql)) {
                 System.out.println("******* Success ********");
-                _jedis.setex("timer:adrealtime:60s", 60, "1");
+                _jedis.setex("timer:adrealtime:5m", 5*60, "1");
             }
-
         }
     }
     public void declareOutputFields(OutputFieldsDeclarer declarer) {declarer.declare(new Fields("word"));}

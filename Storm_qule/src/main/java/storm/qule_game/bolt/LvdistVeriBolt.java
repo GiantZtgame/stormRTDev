@@ -68,13 +68,16 @@ public class LvdistVeriBolt extends BaseBasicBolt {
                         e.printStackTrace();
                     }
                     if (token_gen.equals(token)) {
-                        collector.emit(new Values(game_abbr, platform, server, logtime,lvdists));
+                        String[] times = logtime.split(" ");
+                        if (2 == times.length) {
+                            collector.emit(new Values(game_abbr, platform, server, times[0],lvdists));
+                        }
                     }
                 }
             }
         }
     }
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("game_abbr", "platform", "server","logtime", "lvdists"));
+        declarer.declare(new Fields("game_abbr", "platform", "server","todayStr", "lvdists"));
     }
 }

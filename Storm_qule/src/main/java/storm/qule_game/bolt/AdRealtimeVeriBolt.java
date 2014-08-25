@@ -63,7 +63,7 @@ public class AdRealtimeVeriBolt extends BaseBasicBolt {
                     ip = logs[8];
                 }
                 String host = _prop.getProperty("game." + game_abbr + ".mysql_host");
-                if (host != null) {
+                if (null != host) {
                     String adplanning_id = "0";
                     String chunion_subid = idu;
                     //获取主线id AHSG_100_100_1
@@ -71,7 +71,6 @@ public class AdRealtimeVeriBolt extends BaseBasicBolt {
                     if (gpac.length == 4) {
                         adplanning_id = gpac[3];
                     }
-
                     collector.emit(new Values(game_abbr, platform, server, logtime,keywords,adplanning_id,chunion_subid,ip,uname));
                 }
             }
