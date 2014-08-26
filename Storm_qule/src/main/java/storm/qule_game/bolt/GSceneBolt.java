@@ -11,6 +11,7 @@ import storm.qule_util.*;
 
 import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
@@ -124,12 +125,23 @@ public class GSceneBolt extends BaseBasicBolt {
                     String sceneStartLoadingListKey = "sceneStartLoading:" + game_abbr + ":" + platform_id + ":" + server_id + ":" + todayStr + ":set";
 
                     if (!_jedis.sismember(sceneStartLoadingListKey, uname)) {
-                        sceneStartLoading++;
-                        _jedis.sadd(sceneStartLoadingListKey, uname);
-                        _jedis.expire(sceneStartLoadingListKey, 30 * 24 * 3600);
-                        _jedis.set(sceneStartLoadingKey, sceneStartLoading.toString());
-                        _jedis.expire(sceneStartLoadingKey, 24 * 3600);
-                        ifSceneStartLoadingSql = true;
+                        //判断是否为新用户
+                        String regkey = "greginfo-" + platform_id + "-" + game_abbr + "-" + server_id + "-" + uname;
+                        if (_jedis.exists(regkey)) {
+                            List userinfo = _jedis.lrange(regkey, 0, 0);
+                            String[] userinfoArr = userinfo.get(0).toString().split("-");
+                            if (userinfoArr.length == 6) {
+                                String userRegDateStr = date.timestamp2str(Long.parseLong(userinfoArr[5]), "yyyyMMdd");
+                                if (userRegDateStr.equals(todayStr)) {
+                                    sceneStartLoading++;
+                                    _jedis.sadd(sceneStartLoadingListKey, uname);
+                                    _jedis.expire(sceneStartLoadingListKey, 30 * 24 * 3600);
+                                    _jedis.set(sceneStartLoadingKey, sceneStartLoading.toString());
+                                    _jedis.expire(sceneStartLoadingKey, 24 * 3600);
+                                    ifSceneStartLoadingSql = true;
+                                }
+                            }
+                        }
                     }
                 }
             } else if (11 == logs.length) {
@@ -143,12 +155,23 @@ public class GSceneBolt extends BaseBasicBolt {
                     String enterSceneListKey = "enterScene:" + game_abbr + ":" + platform_id + ":" + server_id + ":" + todayStr + ":set";
 
                     if (!_jedis.sismember(enterSceneListKey, uname)) {
-                        enterScene++;
-                        _jedis.sadd(enterSceneListKey, uname);
-                        _jedis.expire(enterSceneListKey, 30 * 24 * 3600);
-                        _jedis.set(enterSceneKey, enterScene.toString());
-                        _jedis.expire(enterSceneKey, 24 * 3600);
-                        ifEnterSceneSql = true;
+                        //判断是否为新用户
+                        String regkey = "greginfo-" + platform_id + "-" + game_abbr + "-" + server_id + "-" + uname;
+                        if (_jedis.exists(regkey)) {
+                            List userinfo = _jedis.lrange(regkey, 0, 0);
+                            String[] userinfoArr = userinfo.get(0).toString().split("-");
+                            if (userinfoArr.length == 6) {
+                                String userRegDateStr = date.timestamp2str(Long.parseLong(userinfoArr[5]), "yyyyMMdd");
+                                if (userRegDateStr.equals(todayStr)) {
+                                    enterScene++;
+                                    _jedis.sadd(enterSceneListKey, uname);
+                                    _jedis.expire(enterSceneListKey, 30 * 24 * 3600);
+                                    _jedis.set(enterSceneKey, enterScene.toString());
+                                    _jedis.expire(enterSceneKey, 24 * 3600);
+                                    ifEnterSceneSql = true;
+                                }
+                            }
+                        }
                     }
                 }
             }
