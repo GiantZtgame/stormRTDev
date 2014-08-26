@@ -69,7 +69,7 @@ public class JdbcMysql {
         }catch (SQLException e) {
             e.printStackTrace();
         }
-        return a == 1?true:false;
+        return a >0 ?true:false;
     }
 
     //批量处理

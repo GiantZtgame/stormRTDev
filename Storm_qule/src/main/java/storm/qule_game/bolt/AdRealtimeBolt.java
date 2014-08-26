@@ -10,9 +10,7 @@ import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Tuple;
 import redis.clients.jedis.Jedis;
 import storm.qule_util.*;
-
 import java.util.*;
-import java.util.regex.Pattern;
 
 public class AdRealtimeBolt extends BaseBasicBolt {
     private Jedis _jedis;
@@ -21,7 +19,7 @@ public class AdRealtimeBolt extends BaseBasicBolt {
     private static timerCfgLoader _gamecfgLoader = new timerCfgLoader();
     private static cfgLoader _cfgLoader = new cfgLoader();
     private static String _gamecfg;
-    List<String> k = Arrays.asList("adreg", "adex", "adloading", "adpost", "adclick", "adarrive");
+    List<String> K = Arrays.asList("adreg", "adex", "adloading", "adpost", "adclick", "adarrive");
 
     /**
      * 加载配置文件
@@ -51,54 +49,57 @@ public class AdRealtimeBolt extends BaseBasicBolt {
         String[] logs = sentence.split("\\|");
         if (logs.length >= 8 ) {
             String keywords = logs[4];
-            if (k.contains(keywords)) {
+            if (K.contains(keywords)) {
                 String game_abbr = logs[0];
                 String platform = logs[1];
                 String server = logs[2];
-                String datetime = logs[3];
+                String logtime = logs[3];
                 String ida = logs[5];
                 String idu = logs[6];
                 String ip = logs[7];
-
 
                 String host = _prop.getProperty("game." + game_abbr + ".mysql_host");
                 if (host != null) {
 
                     String adplanning_id = "0";
-                    String chunion_subid = "0";
+                    String chunion_subid = idu;
                     //获取主线id AHSG_100_100_1
-                    String[] param = ida.split("_");
-                    if (param.length == 4) {
-                        adplanning_id = param[3];
-                        chunion_subid = idu;
+                    String[] gpac = ida.split("_");
+                    if (gpac.length == 4) {
+                        adplanning_id = gpac[3];
                     }
-                    Long datestamp = date.str2timestamp(datetime);
-                    String todayStr = date.timestamp2str(datestamp, "yyyyMMdd");
 
-                    //唯一键
-                    String PSG = platform + ":" + server + ":" + game_abbr;
+                    //logtime 2013-11-25 08:34:48
+                    String[] date_time = logtime.split(" ");
+                    if (date_time.length == 2) {
+                        logtime = date_time[0] + " 00:00:00";
+                    }
+                    Long datetime = date.str2timestamp(logtime);
+                    String todayStr = date.timestamp2str(datetime, "yyyyMMdd");
+
+                    //adrealtime
+                    String REAL = adplanning_id + ":" +chunion_subid;
+                    //adref
+                    String REF = platform + ":" + server + ":" + adplanning_id + ":" +chunion_subid;
+
                     //redis key
-                    String r_adreg_5m = "adreg:" + PSG + ":5m:incr";
-                    String r_adreg_1h = "adreg:" + PSG + ":1h:incr";
+                    String r_adreg_5m = "adreg:" + REAL + ":5m:incr";
+                    String r_adreg_1h = "adreg:" + REAL + ":1h:incr";
+                    String r_adex_ip_5m = "adex:" + REAL + ":ip:5m:set";
+                    String r_adex_ip_1h = "adex:" + REAL + ":ip:1h:set";
+                    String r_adex_pv_5m = "adex:" + REAL + ":pv:5m:incr";
+                    String r_adex_pv_1h = "adex:" + REAL + ":pv:1h:incr";
 
-                    String r_adex_ip_5m = "adex:" + PSG + ":ip:5m:set";
-                    String r_adex_ip_1h = "adex:" + PSG + ":ip:1h:set";
-                    String r_adex_pv_5m = "adex:" + PSG + ":pv:5m:incr";
-                    String r_adex_pv_1h = "adex:" + PSG + ":pv:1h:incr";
-                    String r_adex_ip_td = "adex:" + PSG + ":ip:" + todayStr + ":set";
-                    String r_adex_pv_td = "adex:" + PSG + ":pv:" + todayStr + ":incr";
-
-                    String r_adloading_ip_td = "adloading:" + PSG + ":ip:" + todayStr + ":set";
-                    String r_adloading_pv_td = "adloading:" + PSG + ":pv:" + todayStr + ":incr";
-
-                    String r_adpost_ip_td = "adpost:" + PSG + ":ip:" + todayStr + ":set";
-                    String r_adpost_pv_td = "adpost:" + PSG + ":pv:" + todayStr + ":incr";
-
-                    String r_adclick_ip_td = "adclick:" + PSG + ":ip:" + todayStr + ":set";
-                    String r_adclick_pv_td = "adclick:" + PSG + ":pv:" + todayStr + ":incr";
-
-                    String r_adarrive_ip_td = "adarrive:" + PSG + ":ip:" + todayStr + ":set";
-                    String r_adarrive_pv_td = "adarrive:" + PSG + ":pv:" + todayStr + ":incr";
+                    String r_adex_ip_td = "adex:" + REF + ":ip:" + todayStr + ":set";
+                    String r_adex_pv_td = "adex:" + REF + ":pv:" + todayStr + ":incr";
+                    String r_adloading_ip_td = "adloading:" + REF + ":ip:" + todayStr + ":set";
+                    String r_adloading_pv_td = "adloading:" + REF + ":pv:" + todayStr + ":incr";
+                    String r_adpost_ip_td = "adpost:" + REF + ":ip:" + todayStr + ":set";
+                    String r_adpost_pv_td = "adpost:" + REF + ":pv:" + todayStr + ":incr";
+                    String r_adclick_ip_td = "adclick:" + REF + ":ip:" + todayStr + ":set";
+                    String r_adclick_pv_td = "adclick:" + REF + ":pv:" + todayStr + ":incr";
+                    String r_adarrive_ip_td = "adarrive:" + REF + ":ip:" + todayStr + ":set";
+                    String r_adarrive_pv_td = "adarrive:" + REF + ":pv:" + todayStr + ":incr";
 
                     //注册
                     //记录5分钟和1小时时间段注册人数
@@ -210,7 +211,7 @@ public class AdRealtimeBolt extends BaseBasicBolt {
                         insert.put("chunion_subid", chunion_subid);
                         insert.put("platform", platform);
                         insert.put("server", server);
-                        insert.put("date", datestamp);
+                        insert.put("date", datetime);
                         insert.put("up_time", up_time);
                         insert.put("ad_hit", adclick_pv);
                         insert.put("ad_hit_ip", adclick_ip);
@@ -275,7 +276,6 @@ public class AdRealtimeBolt extends BaseBasicBolt {
                         insert_5m.put("characters", 0);
                         insert_5m.put("ip", adex_ip_5m);
                         insert_5m.put("pv", adex_pv_5m);
-
                         insert_1h.put("adplanning_id", adplanning_id);
                         insert_1h.put("chunion_subid", chunion_subid);
                         insert_1h.put("datetime", tis_datetime_1h);
@@ -288,7 +288,6 @@ public class AdRealtimeBolt extends BaseBasicBolt {
                         update_5m.put("p_reg", adreg_5m);
                         update_5m.put("ip", adex_ip_5m);
                         update_5m.put("pv", adex_pv_5m);
-
                         update_1h.put("p_reg", adreg_1h);
                         update_1h.put("ip", adex_ip_1h);
                         update_1h.put("pv", adex_pv_1h);
