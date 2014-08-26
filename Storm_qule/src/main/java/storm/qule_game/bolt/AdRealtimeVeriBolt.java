@@ -71,14 +71,13 @@ public class AdRealtimeVeriBolt extends BaseBasicBolt {
                     if (gpac.length == 4) {
                         adplanning_id = gpac[3];
                     }
-                    //logtime 2013-11-25 08:34:48
-                    String todayStr = date.timestamp2str(date.str2timestamp(logtime), "yyyyMMdd");
-                    collector.emit(new Values(game_abbr, platform, server, todayStr,keywords,adplanning_id,chunion_subid,ip,uname));
+
+                    collector.emit(new Values(game_abbr, platform, server, logtime,keywords,adplanning_id,chunion_subid,ip,uname));
                 }
             }
         }
     }
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("game_abbr","platform","server","todayStr","keywords","adplanning_id","chunion_subid","ip","uname"));
+        declarer.declare(new Fields("game_abbr","platform","server","logtime","keywords","adplanning_id","chunion_subid","ip","uname"));
     }
 }

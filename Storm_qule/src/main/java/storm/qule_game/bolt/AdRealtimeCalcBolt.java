@@ -44,14 +44,18 @@ public class AdRealtimeCalcBolt extends BaseBasicBolt {
 
         //"game_abbr","platform","server","todayStr","keywords","adplanning_id","chunion_subid","ip","uname"
         String game_abbr = tuple.getStringByField("game_abbr");
-        String todayStr = tuple.getStringByField("todayStr");
+        String platform = tuple.getStringByField("platform");
+        String server = tuple.getStringByField("server");
+
+        String logtime = tuple.getStringByField("logtime");
         String keywords = tuple.getStringByField("keywords");
         String adplanning_id = tuple.getStringByField("adplanning_id");
         String chunion_subid = tuple.getStringByField("chunion_subid");
         String ip = tuple.getStringByField("ip");
         String uname = tuple.getStringByField("uname");
-
-        Long nowtime = System.currentTimeMillis() / 1000;
+        //logtime 2013-11-25 08:34:48
+        Long nowtime = date.str2timestamp(logtime) / 1000;
+        String todayStr = date.timestamp2str(nowtime, "yyyyMMdd");
         Long tis_datetime_5m = nowtime - nowtime % 300;
         Long tis_datetime_1h = nowtime - nowtime % 3600;
         //adrealtime
@@ -98,12 +102,11 @@ public class AdRealtimeCalcBolt extends BaseBasicBolt {
         Long adex_ip_1h = _jedis.exists(r_adex_ip_1h) ? _jedis.scard(r_adex_ip_1h) : 0l;
 
 
-        System.out.println("==============adrealtime================");
+        System.out.println("=============="+platform+":"+server+":"+REAL+"================");
         System.out.println("5m广告注册数：" + adreg_5m);
         System.out.println("1h广告注册数：" + adreg_1h);
-        System.out.println("5m广告弹出pv：" + adex_pv_5m + " 5m广告弹出ip：" + adex_ip_5m);
-        System.out.println("1h广告弹出pv：" + adex_pv_1h + " 1h广告弹出ip：" + adex_ip_1h);
-        System.out.println("======================================");
+        System.out.println("5m广告弹出pv：" + adex_pv_5m + "  5m广告弹出ip：" + adex_ip_5m);
+        System.out.println("1h广告弹出pv：" + adex_pv_1h + "  1h广告弹出ip：" + adex_ip_1h);
 
         //数据库60s更新一次
         Long uptime = date.str2timestamp(todayStr+" 23:59:00");

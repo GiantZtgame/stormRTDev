@@ -48,13 +48,15 @@ public class AdRefBolt extends BaseBasicBolt {
         String game_abbr = tuple.getStringByField("game_abbr");
         String platform = tuple.getStringByField("platform");
         String server = tuple.getStringByField("server");
-        String todayStr = tuple.getStringByField("todayStr");
-        Long todayStamp = date.str2timestamp(todayStr);
+        String logtime = tuple.getStringByField("logtime");
         String keywords = tuple.getStringByField("keywords");
         String adplanning_id = tuple.getStringByField("adplanning_id");
         String chunion_subid = tuple.getStringByField("chunion_subid");
         String ip = tuple.getStringByField("ip");
 
+        //logtime 2013-11-25 08:34:48
+        String todayStr = date.timestamp2str(date.str2timestamp(logtime), "yyyyMMdd");
+        Long todayStamp = date.str2timestamp(todayStr);
         //adref
         String REF = platform + ":" + server + ":" + adplanning_id + ":" +chunion_subid;
 
@@ -130,14 +132,12 @@ public class AdRefBolt extends BaseBasicBolt {
 
         String adarrive_pv = _jedis.exists(r_adarrive_pv_td) ? _jedis.get(r_adarrive_pv_td) : "0";
         Long adarrive_ip = _jedis.exists(r_adarrive_ip_td) ? _jedis.scard(r_adarrive_ip_td) : 0l;
-
-        System.out.println("===============adref=================");
-        System.out.println("广告弹出pv：" + adex_pv + " 广告弹出ip：" + adex_ip);
-        System.out.println("广告加载pv：" + adloading_pv + " 广告加载ip：" + adloading_ip);
-        System.out.println("广告完展pv：" + adpost_pv + " 广告完展ip：" + adpost_ip);
-        System.out.println("广告点击pv：" + adclick_pv + " 广告点击ip：" + adclick_ip);
-        System.out.println("页面到达pv：" + adarrive_pv + " 页面到达ip：" + adarrive_ip);
-        System.out.println("======================================");
+        System.out.println("广告弹出pv：" + adex_pv + "    广告弹出ip：" + adex_ip);
+        System.out.println("广告加载pv：" + adloading_pv + "    广告加载ip：" + adloading_ip);
+        System.out.println("广告完展pv：" + adpost_pv + "    广告完展ip：" + adpost_ip);
+        System.out.println("广告点击pv：" + adclick_pv + "    广告点击ip：" + adclick_ip);
+        System.out.println("页面到达pv：" + adarrive_pv + "    页面到达ip：" + adarrive_ip);
+        System.out.println("==========================================");
 
         //数据库60s更新一次
         Long nowtime = System.currentTimeMillis() / 1000;
