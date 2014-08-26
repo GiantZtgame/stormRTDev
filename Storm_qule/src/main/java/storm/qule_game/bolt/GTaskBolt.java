@@ -135,6 +135,7 @@ public class GTaskBolt extends BaseBasicBolt {
                     }
                     System.out.println("======================");
 
+                    Long uptime = date.str2timestamp(datetimestr);
                     //date 当天0点时间戳
                     String[] d = datetimestr.split(" ");
                     String tdstr = "";
@@ -203,7 +204,7 @@ public class GTaskBolt extends BaseBasicBolt {
                             String chunion_subid = gadinfo.get(3);
 
                             if (Integer.parseInt(adplanning_id) > 0) {
-                                String todayStr = date.timestamp2str(datetime, "yyyyMMdd");
+                                String todayStr = date.timestamp2str(uptime, "yyyyMMdd");
                                 Long todayDate = date.str2timestamp(todayStr, "yyyyMMdd");
 
                                 String effective_key = "adEffective:" + todayStr + ":" + game_abbr + ":" + platform + ":" + server + ":" + adplanning_id + ":" + chunion_subid + ":incr";
@@ -213,7 +214,7 @@ public class GTaskBolt extends BaseBasicBolt {
                                 _jedis.expire(effective_key, 24*60*60);
                                 String adEffectiveSql = String.format("INSERT INTO adplanning_signinLogin_today (adplanning_id, chunion_subid, platform, server, date, up_time, effective)" +
                                                 "VALUES (%s, %s, %s, %s, %d, %d, %d) ON DUPLICATE KEY UPDATE effective=%d",
-                                        adplanning_id, chunion_subid, platform, server, todayDate, datetime, countAdEffective, countAdEffective);
+                                        adplanning_id, chunion_subid, platform, server, todayDate, uptime, countAdEffective, countAdEffective);
                                 sqls.add(adEffectiveSql);
                             }
                         }
