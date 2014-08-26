@@ -135,6 +135,7 @@ public class GTaskBolt extends BaseBasicBolt {
                     }
                     System.out.println("======================");
 
+                    Long uptime = date.str2timestamp(datetimestr);
                     //date 当天0点时间戳
                     String[] d = datetimestr.split(" ");
                     String tdstr = "";
@@ -188,6 +189,37 @@ public class GTaskBolt extends BaseBasicBolt {
                             }
                         }
                     }
+
+                    //广告有效用户（完成新手任务）
+                    if (keywords.equals("task_newbie") && logs.length == 9) {
+                        uname = logs[6];
+                        cname = logs[7];
+                        //获取广告信息
+                        String hash_key = "gadinfo-" + platform + "-" + uname;
+                        if (_jedis.exists(hash_key)) {
+                            List<String> gadinfo = _jedis.hmget(hash_key, "chid", "chposid", "adplanning_id", "chunion_subid");
+                            String chid = gadinfo.get(0);
+                            String chposid = gadinfo.get(1);
+                            String adplanning_id = gadinfo.get(2);
+                            String chunion_subid = gadinfo.get(3);
+
+                            if (Integer.parseInt(adplanning_id) > 0) {
+                                String todayStr = date.timestamp2str(uptime, "yyyyMMdd");
+                                Long todayDate = date.str2timestamp(todayStr, "yyyyMMdd");
+
+                                String effective_key = "adEffective:" + todayStr + ":" + game_abbr + ":" + platform + ":" + server + ":" + adplanning_id + ":" + chunion_subid + ":incr";
+                                Integer countAdEffective = !_jedis.exists(effective_key) ? 0 : Integer.parseInt(_jedis.get(effective_key));
+                                countAdEffective++;
+                                _jedis.incr(effective_key);
+                                _jedis.expire(effective_key, 24*60*60);
+                                String adEffectiveSql = String.format("INSERT INTO adplanning_signinLogin_today (adplanning_id, chunion_subid, platform, server, date, up_time, effective)" +
+                                                "VALUES (%s, %s, %s, %s, %d, %d, %d) ON DUPLICATE KEY UPDATE effective=%d",
+                                        adplanning_id, chunion_subid, platform, server, todayDate, uptime, countAdEffective, countAdEffective);
+                                sqls.add(adEffectiveSql);
+                            }
+                        }
+                    }
+
                     if (con.batchAdd(sqls)) {
                         System.out.println("*********** Success ************");
                     }
