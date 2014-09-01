@@ -82,25 +82,19 @@ public class GLoginCalcBolt extends BaseBasicBolt {
                 String new_ip = "login:" + PSG + ":" + todayStr + ":newip:set";
                 String new_char = "login:" + PSG + ":" + todayStr + ":newchar:set";
                 //新增ip数
-                if (!_jedis.sismember(tt_ip, ip)) {
+                if (_jedis.sadd(tt_ip,ip) == 1l) {
                     _jedis.sadd(new_ip,ip);
-                    _jedis.expire(new_ip, 24 * 60 * 60);
                 }
+
                 //新增账号
-                if (!_jedis.sismember(tt_char, uname)) {
+                if (_jedis.sadd(tt_char,uname) == 1l) {
                     _jedis.sadd(new_char,uname);
-                    _jedis.expire(new_char, 24 * 60 * 60);
                 }
-                //总ip
-                _jedis.sadd(tt_ip, ip);
-                //总账号
-                _jedis.sadd(tt_char, uname);
-                //当天登录ip
+
                 _jedis.sadd(td_ip, ip);
-                _jedis.expire(td_ip, 30 * 24 * 60 * 60);
-                //当天登录账号
                 _jedis.sadd(td_char, uname);
-                _jedis.expire(td_char, 30 * 24 * 60 * 60);
+                _jedis.expire(td_ip, 24 * 60 * 60);
+                _jedis.expire(td_char, 24 * 60 * 60);
 
                 Long daily_logins = _jedis.scard(td_ip);
                 Long daily_logins_char = _jedis.scard(td_char);
