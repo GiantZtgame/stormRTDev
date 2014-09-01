@@ -2,9 +2,7 @@ package storm.qule_util;
 
 import java.sql.*;
 
-import clojure.lang.Obj;
 import com.mysql.jdbc.Connection;
-import com.mysql.jdbc.exceptions.jdbc4.CommunicationsException;
 
 import java.util.*;
 
@@ -71,22 +69,38 @@ public class JdbcMysql {
         }
         return a >0 ?true:false;
     }
+    public void batchAdd(Queue<String>sqls) {
+        try {
+            conn.setAutoCommit(false);
+            statement = conn.createStatement();
+            String sql;
+            while ((sql = sqls.poll()) != null) {
+                System.out.println(sql);
+                statement.addBatch(sql);
+            }
+            statement.executeBatch();
+            conn.commit();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
 
-    //批量处理
-    public boolean batchAdd(List sqls) {
+        //批量处理
+    public void batchAdd(List<String>sqls) {
         try {
             conn.setAutoCommit(false);
             statement =conn.createStatement();
-            for (int i =0;i<sqls.size();i++) {
-                a = statement.executeUpdate(sqls.get(i).toString());
+            for (String sql: sqls) {
+                statement.addBatch(sql);
             }
+            statement.executeBatch();
             conn.commit();
         }catch (SQLException e){
             e.printStackTrace();
         }
-        return a > 0?true:false;
+        System.out.println("********* Success ***********");
     }
-    //删除数据  
+        //删除数据
     public int delete(String sql){
         try {
             statement =conn.createStatement();

@@ -7,12 +7,8 @@ import backtype.storm.topology.base.BaseBasicBolt;
 import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Tuple;
 import redis.clients.jedis.Jedis;
-import storm.qule_game.GDailyRemainTopology;
-import storm.qule_game.GRechargeTopology;
 import storm.qule_util.*;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.*;
 
 /**
@@ -55,53 +51,50 @@ public class GDailyRemainBolt extends BaseBasicBolt {
         String db = _prop.getProperty("game." + game_abbr + ".mysql_db");
         String user = _prop.getProperty("game." + game_abbr + ".mysql_user");
         String passwd = _prop.getProperty("game." + game_abbr + ".mysql_passwd");
+
         if (host != null) {
+
             String todayStr = date.timestamp2str(logtime, "yyyyMMdd");
-            List someday =  Arrays.asList(1,2,3,4,5,6,7,14,30);
+            List<Integer> someday =  Arrays.asList(1,2,3,4,5,6,7,14,30);
             List<String> sqls = new ArrayList<String>();
-            System.out.println("======================================");
-            for (int i = 0; i < someday.size(); i++) {
-                String day = someday.get(i).toString();
-                int d = Integer.parseInt(todayStr) - Integer.parseInt(day);
-                Long datestamp = date.str2timestamp(d+" 00:00:00");
+
+            for (int day : someday) {
+                Long somedayStamp = logtime - day * 24 * 60 * 60;
+                String somedayStr = date.timestamp2str(somedayStamp, "yyyyMMdd");
 
                 //===============================一般用户================================
-                //redis key
-                String someday_char = "login:" + platform_id + ":" + server_id + ":" + game_abbr + ":" + d + ":char:set";
-                String dailyremain = "gdailyremain:" + platform_id + ":" + server_id + ":" + game_abbr + ":" + todayStr + ":" + i + ":incr";
+                //唯一键
+                String PSG = platform_id + ":" + server_id + ":" + game_abbr;
+                String dailyremain = "gdailyremain:" + PSG + ":" + todayStr + ":" + day + ":incr";
+                String someday_char = "login:" + PSG + ":" + somedayStr + ":newchar:set";
+
                 if (_jedis.sismember(someday_char, uname)) {
-                    _jedis.incr(dailyremain);
-                    _jedis.expire(dailyremain, 24 * 60 * 60);
-                }
-                String data = _jedis.exists(dailyremain) ? _jedis.get(dailyremain) : "0";
-                String sql = "INSERT INTO `opdata_dailyRemain` (`platform`,`server`,`date`,`day" + day + "`) VALUES(" + platform_id + "," + server_id + "," + datestamp + "," + data +
-                        ") ON DUPLICATE KEY UPDATE `day" + day + "` = " + data;
-                sqls.add(sql);
-                //===============================广告用户================================
-                String hash_key = "gadinfo-" + platform_id + "-" + uname;
-                if (_jedis.exists(hash_key)) {
-                    List<String> gadinfo = _jedis.hmget(hash_key, "chid", "chposid", "adplanning_id", "chunion_subid");
-                    String adplanning_id = gadinfo.get(2);
-                    String chunion_subid = gadinfo.get(3);
-                    if (Integer.parseInt(adplanning_id) > 0) {
-                        String addailyremain = "addailyremain:" + adplanning_id + ":" + chunion_subid + ":" + todayStr + ":" + i + ":incr";
-                        if (_jedis.sismember(someday_char, uname)) {
-                            _jedis.incr(addailyremain);
-                            _jedis.expire(addailyremain, 24 * 60 * 60);
+                    _jedis.sadd(dailyremain,uname);
+                    //===============================广告用户================================
+                    String hash_key = "gadinfo-" + platform_id + "-" + uname;
+                    if (_jedis.exists(hash_key)) {
+
+                        String adplanning_id = _jedis.hget(hash_key,"adplanning_id");
+                        String chunion_subid = _jedis.hget(hash_key,"chunion_subid");
+
+                        if (Integer.parseInt(adplanning_id) > 0) {
+                            String addailyremain = "addailyremain:"+ PSG + ":" + adplanning_id + ":" + chunion_subid + ":" + todayStr + ":" + day + ":incr";
+                            _jedis.sadd(addailyremain,uname);
+
+                            Long adata = _jedis.scard(addailyremain);
+                            String adsql = "INSERT INTO `adplanning_dailyRemain` (`adplanning_id`,`chunion_subid`,`platform`,`server`,`date`,`day" + day + "`) VALUES(" + adplanning_id + "," + chunion_subid + ","+platform_id + "," + server_id + "," + somedayStamp + "," + adata +") ON DUPLICATE KEY UPDATE `day" + day + "` = " + adata;
+                            sqls.add(adsql);
                         }
-                        String data1 = _jedis.exists(addailyremain) ? _jedis.get(addailyremain) : "0";
-                        String adsql = "INSERT INTO `adplanning_dailyRemain` (`adplanning_id`,`chunion_subid`,`platform`,`server`,`date`,`day" + day + "`) VALUES(" + adplanning_id + "," + chunion_subid + ","+platform_id + "," + server_id + "," + datestamp + "," + data1 +
-                                ") ON DUPLICATE KEY UPDATE `day" + day + "` = " + data1;
-                        sqls.add(adsql);
                     }
                 }
+                Long data = _jedis.scard(dailyremain);
+                String sql = "INSERT INTO `opdata_dailyRemain` (`platform`,`server`,`date`,`day" + day + "`) VALUES(" + platform_id + "," + server_id + "," + somedayStamp + "," + data +") ON DUPLICATE KEY UPDATE `day" + day + "` = " + data;
+                sqls.add(sql);
                 System.out.println("第" + day + "日留存：" + data);
             }
-            System.out.println("======================================");
+
             JdbcMysql con = JdbcMysql.getInstance(game_abbr, host, port, db, user, passwd);
-            if (con.batchAdd(sqls)) {
-                System.out.println("*********** Success ************");
-            }
+            con.batchAdd(sqls);
         }
     }
 
