@@ -47,15 +47,10 @@ public class GDailyRemainBolt extends BaseBasicBolt {
         String uname = tuple.getStringByField("uname");
 
         String host = _prop.getProperty("game." + game_abbr + ".mysql_host");
-        String port = _prop.getProperty("game." + game_abbr + ".mysql_port");
-        String db = _prop.getProperty("game." + game_abbr + ".mysql_db");
-        String user = _prop.getProperty("game." + game_abbr + ".mysql_user");
-        String passwd = _prop.getProperty("game." + game_abbr + ".mysql_passwd");
-
         if (host != null) {
 
             String todayStr = date.timestamp2str(logtime, "yyyyMMdd");
-            List<Integer> someday =  Arrays.asList(1,2,3,4,5,6,7,14,30);
+            int someday[]={1,2,3,4,5,6,7,14,30};
             List<String> sqls = new ArrayList<String>();
 
             for (int day : someday) {
@@ -65,7 +60,7 @@ public class GDailyRemainBolt extends BaseBasicBolt {
                 //===============================一般用户================================
                 //唯一键
                 String PSG = platform_id + ":" + server_id + ":" + game_abbr;
-                String dailyremain = "gdailyremain:" + PSG + ":" + todayStr + ":" + day + ":incr";
+                String dailyremain = "gdailyremain:" + PSG + ":" + todayStr + ":" + day + ":set";
                 String someday_char = "login:" + PSG + ":" + somedayStr + ":newchar:set";
 
                 if (_jedis.sismember(someday_char, uname)) {
@@ -74,11 +69,12 @@ public class GDailyRemainBolt extends BaseBasicBolt {
                     String hash_key = "gadinfo-" + platform_id + "-" + uname;
                     if (_jedis.exists(hash_key)) {
 
-                        String adplanning_id = _jedis.hget(hash_key,"adplanning_id");
-                        String chunion_subid = _jedis.hget(hash_key,"chunion_subid");
+                        List<String> adinfo = _jedis.hmget(hash_key,"adplanning_id","chunion_subid");
+                        String adplanning_id = adinfo.get(0);
+                        String chunion_subid = adinfo.get(1);
 
                         if (Integer.parseInt(adplanning_id) > 0) {
-                            String addailyremain = "addailyremain:"+ PSG + ":" + adplanning_id + ":" + chunion_subid + ":" + todayStr + ":" + day + ":incr";
+                            String addailyremain = "addailyremain:"+ PSG + ":" + adplanning_id + ":" + chunion_subid + ":" + todayStr + ":" + day + ":set";
                             _jedis.sadd(addailyremain,uname);
 
                             Long adata = _jedis.scard(addailyremain);
@@ -92,7 +88,10 @@ public class GDailyRemainBolt extends BaseBasicBolt {
                 sqls.add(sql);
                 System.out.println("第" + day + "日留存：" + data);
             }
-
+            String port = _prop.getProperty("game." + game_abbr + ".mysql_port");
+            String db = _prop.getProperty("game." + game_abbr + ".mysql_db");
+            String user = _prop.getProperty("game." + game_abbr + ".mysql_user");
+            String passwd = _prop.getProperty("game." + game_abbr + ".mysql_passwd");
             JdbcMysql con = JdbcMysql.getInstance(game_abbr, host, port, db, user, passwd);
             con.batchAdd(sqls);
         }
