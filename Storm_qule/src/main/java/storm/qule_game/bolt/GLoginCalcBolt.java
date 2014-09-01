@@ -71,7 +71,6 @@ public class GLoginCalcBolt extends BaseBasicBolt {
                     adplanning_id = gadinfo.get(2);
                     chunion_subid = gadinfo.get(3);
                 }
-                //唯一键
                 String PSG = platform_id + ":" + server_id + ":" + game_abbr;
                 //redis key
                 String tt_ip = "login:" + PSG + ":total:ip:set";
@@ -80,16 +79,16 @@ public class GLoginCalcBolt extends BaseBasicBolt {
                 String td_ip = "login:" + PSG + ":" + todayStr + ":ip:set";
                 String td_char = "login:" + PSG + ":" + todayStr + ":char:set";
 
-                String new_ip = "login:" + PSG + ":" + todayStr + ":newip:incr";
-                String new_char = "login:" + PSG + ":" + todayStr + ":newchar:incr";
+                String new_ip = "login:" + PSG + ":" + todayStr + ":newip:set";
+                String new_char = "login:" + PSG + ":" + todayStr + ":newchar:set";
                 //新增ip数
                 if (!_jedis.sismember(tt_ip, ip)) {
-                    _jedis.incr(new_ip);
+                    _jedis.sadd(new_ip,ip);
                     _jedis.expire(new_ip, 24 * 60 * 60);
                 }
                 //新增账号
                 if (!_jedis.sismember(tt_char, uname)) {
-                    _jedis.incr(new_char);
+                    _jedis.sadd(new_char,uname);
                     _jedis.expire(new_char, 24 * 60 * 60);
                 }
                 //总ip
@@ -105,8 +104,8 @@ public class GLoginCalcBolt extends BaseBasicBolt {
 
                 Long daily_logins = _jedis.scard(td_ip);
                 Long daily_logins_char = _jedis.scard(td_char);
-                String daily_logins_new = _jedis.exists(new_ip) ? _jedis.get(new_ip) : "0";
-                String daily_logins_char_new = _jedis.exists(new_char) ? _jedis.get(new_char) : "0";
+                Long daily_logins_new = _jedis.scard(new_ip);
+                Long daily_logins_char_new = _jedis.scard(new_char);
 
                 System.out.println("=============" + PSG + "==============");
                 System.out.println("登录ip：" + ip + " 登录账号：" + uname);
