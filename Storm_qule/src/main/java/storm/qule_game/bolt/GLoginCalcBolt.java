@@ -7,6 +7,8 @@ import backtype.storm.topology.base.BaseBasicBolt;
 import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Tuple;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
 import redis.clients.jedis.Jedis;
 
 import storm.qule_util.*;
@@ -49,7 +51,8 @@ public class GLoginCalcBolt extends BaseBasicBolt {
             String game_abbr = tuple.getStringByField("game_abbr");
             String platform_id = tuple.getStringByField("platform_id");
             String server_id = tuple.getStringByField("server_id");
-            String todayStr = date.timestamp2str(tuple.getLongByField("login_datetime"), "yyyyMMdd");
+            Long log_datetime = tuple.getLongByField("login_datetime");
+            String todayStr = date.timestamp2str(log_datetime, "yyyyMMdd");
             String ip = tuple.getStringByField("login_ip");
             String uname = tuple.getStringByField("uname");
 
@@ -81,6 +84,62 @@ public class GLoginCalcBolt extends BaseBasicBolt {
 
                 String new_ip = "login:" + PSG + ":" + todayStr + ":newip:set";
                 String new_char = "login:" + PSG + ":" + todayStr + ":newchar:set";
+
+                String todayHourStr = date.timestamp2str(log_datetime, "yyyyMMdd-HH");
+                String curHour = date.timestamp2str(log_datetime, "H");
+                String hourlyLoginCountsKey = "login:" + PSG + ":" + todayHourStr + ":hourlychar:incr";
+                String hourlyNewLoginCountsKey = "login:" + PSG + ":" + todayHourStr + ":hourlynewchar:incr";
+                boolean hourlyLoginFlag = false;
+
+                String joblyLoginJsonKey = "login:" + PSG + ":" + todayStr + ":joblychar:incr";
+                boolean joblyLoginFlag = false;
+
+                //按时段登录数 按职业登录数
+                Integer hourlyLoginCounts = null == _jedis.get(hourlyLoginCountsKey) ? 0 : Integer.parseInt(_jedis.get(hourlyLoginCountsKey));
+                String joblyLoginJson = null == _jedis.get(joblyLoginJsonKey) ? "[]" : _jedis.get(joblyLoginJsonKey);
+                if (!_jedis.sismember(td_char, uname)) {
+                    hourlyLoginCounts++;
+                    _jedis.set(hourlyLoginCountsKey, hourlyLoginCounts.toString());
+                    _jedis.expire(hourlyLoginCountsKey, 24 * 60 * 60);
+                    hourlyLoginFlag = true;
+
+                    //获取用户角色信息
+                    String regkey = "greginfo-" + platform_id + "-" + game_abbr + "-" + server_id + "-" + uname;
+                    if (_jedis.exists(regkey)) {
+                        List userinfo = _jedis.lrange(regkey, 0, 0);
+                        String reginfoHashKey = userinfo.get(0).toString();
+                        List<String> reginfo = _jedis.hmget(reginfoHashKey, "job");
+                        String jid = reginfo.get(0);
+
+                        JSONArray joblyLoginJsonArray = new JSONArray(joblyLoginJson);
+                        JSONArray joblyLoginJsonArrayGen = new JSONArray();
+                        boolean jidExist = false;
+                        for(int i=0 ; i < joblyLoginJsonArray.length() ; i++) {
+                            String curJid = joblyLoginJsonArray.getJSONObject(i).getString("jid");
+                            Integer charCounts = joblyLoginJsonArray.getJSONObject(i).getInt("cc");
+                            if (curJid.equals(jid)) {
+                                charCounts++;
+                                jidExist = true;
+                            }
+                            joblyLoginJsonArrayGen.put(new JSONObject().put("jid", curJid).put("cc", charCounts));
+                        }
+                        if (!jidExist) {
+                            joblyLoginJsonArrayGen.put(new JSONObject().put("jid", jid).put("cc", 1));
+                        }
+                        joblyLoginJson = joblyLoginJsonArrayGen.toString();
+                        joblyLoginFlag = true;
+                    }
+                }
+                //按时段新登数
+                Integer hourlyNewLoginCounts = null == _jedis.get(hourlyNewLoginCountsKey) ? 0 : Integer.parseInt(_jedis.get(hourlyNewLoginCountsKey));
+                if (!_jedis.sismember(new_char, uname)) {
+                    hourlyNewLoginCounts++;
+                    _jedis.set(hourlyNewLoginCountsKey, hourlyNewLoginCounts.toString());
+                    _jedis.expire(hourlyNewLoginCountsKey, 24 * 60 * 60);
+                    hourlyLoginFlag = true;
+                }
+
+
                 //新增ip数
                 if (_jedis.sadd(tt_ip,ip) == 1l) {
                     _jedis.sadd(new_ip,ip);
@@ -134,6 +193,19 @@ public class GLoginCalcBolt extends BaseBasicBolt {
                     map.put("chunion_subid", chunion_subid);
                     _jedis.hmset(value, map);
                     System.out.println("*********** Success ************");
+                }
+
+                if (hourlyLoginFlag || joblyLoginFlag) {
+                    String hourlyLoginDbCol = "LT" + curHour;
+                    String hourlyNewLoginDbCol = "NLT" + curHour;
+                    String hourlyLoginSql = String.format("INSERT INTO opdata_signinLogin_hourly_today (platform, server, date, joblyLogins, %s, %s) " +
+                            "VALUES (%s, %s, %d, %s, %d, %d) ON DUPLICATE KEY UPDATE %s=%d, %s=%d;", hourlyLoginDbCol, hourlyNewLoginDbCol,
+                            platform_id, server_id, datetime, joblyLoginJson, hourlyLoginCounts, hourlyNewLoginCounts, hourlyLoginDbCol, hourlyLoginCounts,
+                            hourlyNewLoginDbCol, hourlyNewLoginCounts);
+System.out.println(hourlyLoginSql);
+                    if (con.add(hourlyLoginSql)) {
+                        System.out.println("*********** hourlyLoginSql Success ************");
+                    }
                 }
             }
         }

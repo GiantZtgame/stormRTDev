@@ -46,10 +46,10 @@ public class GRechargeBolt extends BaseBasicBolt {
         //refresh gamecfg
         _prop = _gamecfgLoader.loadCfg(_gamecfg, _prop);
 
-        //AHSG|100|1|08dffed798bf0fd8efaf167814e17460|131125-02:19:43|bill|1385212559|JW201311241109190353|100|qqq18986173900|战天无悔＿
+        //AHSG|100|1|08dffed798bf0fd8efaf167814e17460|131125-02:19:43|bill|1385212559|JW201311241109190353|100|qqq18986173900|战天无悔＿[|80|1]
         String sentence = input.getString(0);
         String[] logs = sentence.split("\\|");
-        if (logs.length == 11) {
+        if (logs.length == 11 || logs.length == 13) {
             String game_abbr = logs[0];
             String platform = logs[1];
             String server = logs[2];
@@ -61,6 +61,18 @@ public class GRechargeBolt extends BaseBasicBolt {
             String yb_amnt = logs[8];
             String uname = logs[9];
             String cname = logs[10];
+            String level = "";
+            String jid = "";
+            try {
+                level = logs[11];
+            } catch (ArrayIndexOutOfBoundsException e) {
+                e.printStackTrace();
+            }
+            try {
+                jid = logs[12];
+            } catch (ArrayIndexOutOfBoundsException e) {
+                e.printStackTrace();
+            }
 
             String host = _prop.getProperty("game." + game_abbr + ".mysql_host");
             String port = _prop.getProperty("game." + game_abbr + ".mysql_port");
@@ -108,6 +120,12 @@ public class GRechargeBolt extends BaseBasicBolt {
                         insert.put("chposid", chposid);
                         insert.put("adplanning_id", adplanning_id);
                         insert.put("chunion_subid", chunion_subid);
+                        if (!"".equals(level)) {
+                            insert.put("lv", level);
+                        }
+                        if (!"".equals(jid)) {
+                            insert.put("jid", jid);
+                        }
 
                         Map<String, Map<String, Object>> data = new HashMap<String, Map<String, Object>>() {{
                             put("insert", insert);
@@ -121,6 +139,8 @@ public class GRechargeBolt extends BaseBasicBolt {
                         System.out.println("游戏名：" + cname);
                         System.out.println("充值订单：" + order_id);
                         System.out.println("充值元宝：" + yb_amnt);
+                        System.out.println("等级：" + level);
+                        System.out.println("职业ID：" + jid);
                         System.out.println("=================================");
                         if (con.add(sql)) {
                             String key = "grechargeinfo-" + platform + "-" + game_abbr + "-" + server + "-" + uname;
@@ -131,6 +151,8 @@ public class GRechargeBolt extends BaseBasicBolt {
                             map.put("amount", amount);
                             map.put("order_id", order_id);
                             map.put("log_time", datetime);
+                            map.put("lv", level);
+                            map.put("jid", jid);
                             _jedis.hmset(value, map);
                             System.out.println("*************Success**************");
                         }

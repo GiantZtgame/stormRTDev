@@ -5,6 +5,7 @@
     <output-test url="file://$MODULE_DIR$/target/test-classes" />
     <content url="file://$MODULE_DIR$">
       <sourceFolder url="file://$MODULE_DIR$/src/main/java" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/test/java" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/multilang" type="java-resource" />
       <sourceFolder url="file://$MODULE_DIR$/src/main/resources" type="java-resource" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
@@ -92,6 +93,7 @@
     <orderEntry type="library" scope="PROVIDED" name="Maven: net.sf.jopt-simple:jopt-simple:3.2" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: org.scala-lang:scala-library:2.10.1" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: com.101tec:zkclient:0.3" level="project" />
+    <orderEntry type="library" name="Maven: org.json:json:20140107" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: reply:reply:0.3.0" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: org.thnetos:cd-client:0.3.6" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: clj-http-lite:clj-http-lite:0.2.0" level="project" />

@@ -19,6 +19,9 @@ public class LvdistCalcBolt extends BaseBasicBolt {
     private static timerCfgLoader _gamecfgLoader = new timerCfgLoader();
     private static cfgLoader _cfgLoader = new cfgLoader();
     private static String _gamecfg;
+
+    private static final String LVDIST_SIGN = "lvdist";
+    private static final String VIPLVDIST_SIGN = "viplvdist";
     /**
      * 加载配置文件
      * @param stormConf
@@ -45,12 +48,19 @@ public class LvdistCalcBolt extends BaseBasicBolt {
         String server = tuple.getStringByField("server");
         String todayStr = tuple.getStringByField("todayStr");
         String[] lvdists = tuple.getStringByField("lvdists").split(";");
+        String keywords = tuple.getStringByField("keywords");
 
         System.out.println("============="+platform + ":" + server + ":" + game_abbr+":lvdist==============");
 
         //datetime 当天时间戳
         Long datetime = date.str2timestamp(todayStr);
         List<String> sqls = new ArrayList<String>();
+
+        String lvDbCol = "";
+        if (LVDIST_SIGN.equals(keywords))
+            lvDbCol = "level";
+        else if (VIPLVDIST_SIGN.equals(keywords))
+            lvDbCol = "viplv";
 
         for (String list : lvdists) {
             String[] data = list.split(":");
@@ -59,12 +69,12 @@ public class LvdistCalcBolt extends BaseBasicBolt {
                 String num = data[1];
 
                 String sql = "INSERT INTO `opdata_lvDist` (`platform`, `server`," +
-                        " `date`, `level`, `num`) VALUES (" + platform + ", " +
+                        " `date`, `" + lvDbCol + "`, `num`) VALUES (" + platform + ", " +
                         server + ", " + datetime + "," + level + ", " + num + " ) ON DUPLICATE KEY UPDATE " +
-                        "`level`=" + level + ",`num`=" + num;
+                        "`" + lvDbCol + "`=" + level + ",`num`=" + num;
                 sqls.add(sql);
 
-                System.out.println(level + "级人数：" + num);
+                System.out.println(lvDbCol + " " + level + "级人数：" + num);
             }
         }
         System.out.println("======================================");

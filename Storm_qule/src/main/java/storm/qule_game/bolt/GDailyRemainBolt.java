@@ -61,6 +61,9 @@ public class GDailyRemainBolt extends BaseBasicBolt {
                 //唯一键
                 String PSG = platform_id + ":" + server_id + ":" + game_abbr;
                 String dailyremain = "gdailyremain:" + PSG + ":" + todayStr + ":" + day + ":set";
+
+                String rechargeDailyremainKey = "gRechDailyremain:" + PSG + ":" + todayStr + ":" + day + ":set";
+
                 String someday_char = "login:" + PSG + ":" + somedayStr + ":newchar:set";
 
                 if (_jedis.sismember(someday_char, uname)) {
@@ -82,11 +85,25 @@ public class GDailyRemainBolt extends BaseBasicBolt {
                             sqls.add(adsql);
                         }
                     }
+
+                    //是否充值用户
+                    String rechKey = "grechargeinfo-" + platform_id + "-" + game_abbr + "-" + server_id + "-" + uname;
+                    if (_jedis.exists(rechKey)) {
+                        _jedis.sadd(rechargeDailyremainKey, uname);
+                    }
                 }
                 Long data = _jedis.scard(dailyremain);
                 String sql = "INSERT INTO `opdata_dailyRemain` (`platform`,`server`,`date`,`day" + day + "`) VALUES(" + platform_id + "," + server_id + "," + somedayStamp + "," + data +") ON DUPLICATE KEY UPDATE `day" + day + "` = " + data;
                 sqls.add(sql);
                 System.out.println("第" + day + "日留存：" + data);
+
+                Long rechargeRemainData = _jedis.scard(rechargeDailyremainKey);
+                String rechargeRemainDbCol = "day" + day;
+                String rechargeRemainSql = String.format("INSERT INTO `opdata_recharge_dailyRemain` (platform, server, date, %s) VALUES " +
+                        "(%s, %s, %d, %d) ON DUPLICATE KEY UPDATE %s=%d;", rechargeRemainDbCol, platform_id, server_id, somedayStamp,
+                        rechargeRemainData, rechargeRemainDbCol, rechargeRemainData);
+                sqls.add(rechargeRemainSql);
+                System.out.println("第" + day + "日充值留存：" + rechargeRemainData);
             }
             String port = _prop.getProperty("game." + game_abbr + ".mysql_port");
             String db = _prop.getProperty("game." + game_abbr + ".mysql_db");

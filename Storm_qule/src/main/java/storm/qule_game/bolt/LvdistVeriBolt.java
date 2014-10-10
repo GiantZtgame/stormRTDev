@@ -57,7 +57,7 @@ public class LvdistVeriBolt extends BaseBasicBolt {
             String host = _prop.getProperty("game." + game_abbr + ".mysql_host");
             if (null != host) {
                 //验证关键字
-                if (keywords.equals("lvdist")) {
+                if (keywords.equals("lvdist") || keywords.equals("viplvdist")) {
                     //验证token
                     String log_key = _prop.getProperty("game." + game_abbr + ".key");
                     String raw_str = game_abbr + platform + server + log_key;
@@ -70,7 +70,7 @@ public class LvdistVeriBolt extends BaseBasicBolt {
                     if (token_gen.equals(token)) {
                         String[] times = logtime.split(" ");
                         if (2 == times.length) {
-                            collector.emit(new Values(game_abbr, platform, server, times[0],lvdists));
+                            collector.emit(new Values(game_abbr, platform, server, times[0], lvdists, keywords));
                         }
                     }
                 }
@@ -78,6 +78,6 @@ public class LvdistVeriBolt extends BaseBasicBolt {
         }
     }
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("game_abbr", "platform", "server","todayStr", "lvdists"));
+        declarer.declare(new Fields("game_abbr", "platform", "server","todayStr", "lvdists", "keywords"));
     }
 }
