@@ -15,6 +15,8 @@ import storm.qule_game.bolt.*;
 import storm.qule_game.spout.AdRealtimeSpout;
 
 import java.io.IOException;
+
+
 public class AdRealtimeTopology {
     public static void main(String[] args) throws /*Exception*/AlreadyAliveException, InvalidTopologyException, InterruptedException, IOException {
         TopologyBuilder builder = new TopologyBuilder();
