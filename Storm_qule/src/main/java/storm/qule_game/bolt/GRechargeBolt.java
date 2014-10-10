@@ -122,16 +122,16 @@ public class GRechargeBolt extends BaseBasicBolt {
                         System.out.println("充值订单：" + order_id);
                         System.out.println("充值元宝：" + yb_amnt);
                         System.out.println("=================================");
+                        String key = "grechargeinfo-" + platform + "-" + game_abbr + "-" + server + "-" + uname;
+                        String value = "grechargedetail-" + platform + "-" + game_abbr + "-" + server + "-" + uname + "-" + datetime;
+                        _jedis.rpush(key, value);
+                        Map map = new HashMap();
+                        map.put("cname", cname);
+                        map.put("amount", amount);
+                        map.put("order_id", order_id);
+                        map.put("log_time", datetime);
+                        _jedis.hmset(value, map);
                         if (con.add(sql)) {
-                            String key = "grechargeinfo-" + platform + "-" + game_abbr + "-" + server + "-" + uname;
-                            String value = "grechargedetail-" + platform + "-" + game_abbr + "-" + server + "-" + uname + "-" + datetime;
-                            _jedis.rpush(key, value);
-                            Map map = new HashMap();
-                            map.put("cname", cname);
-                            map.put("amount", amount);
-                            map.put("order_id", order_id);
-                            map.put("log_time", datetime);
-                            _jedis.hmset(value, map);
                             System.out.println("*************Success**************");
                         }
                     }

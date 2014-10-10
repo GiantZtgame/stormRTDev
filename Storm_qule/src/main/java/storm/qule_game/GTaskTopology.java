@@ -2,7 +2,6 @@ package storm.qule_game;
 /**
  * Created by zhanghang on 2014/7/15.
  */
-
 import backtype.storm.Config;
 import backtype.storm.LocalCluster;
 import backtype.storm.StormSubmitter;
@@ -11,7 +10,6 @@ import backtype.storm.generated.InvalidTopologyException;
 import backtype.storm.spout.SchemeAsMultiScheme;
 import backtype.storm.topology.TopologyBuilder;
 import storm.kafka.*;
-import storm.qule_game.bolt.GTaskBolt;
 import storm.qule_game.bolt.GTaskCalcBolt;
 import storm.qule_game.bolt.GTaskVeriBolt;
 import storm.qule_game.spout.GTaskSpout;
@@ -22,7 +20,6 @@ import java.io.IOException;
 public class GTaskTopology {
     public static void main(String[] args) throws /*Exception*/AlreadyAliveException, InvalidTopologyException, InterruptedException, IOException {
         TopologyBuilder builder = new TopologyBuilder();
-
         builder.setBolt("gtask_veri_bolt", new GTaskVeriBolt(),1).shuffleGrouping("gtask_spout");
         builder.setBolt("gtask_calc_bolt", new GTaskCalcBolt(),1).shuffleGrouping("gtask_veri_bolt");
 

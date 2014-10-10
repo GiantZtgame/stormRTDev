@@ -1,5 +1,4 @@
 package storm.qule_game.bolt;
-
 import backtype.storm.task.TopologyContext;
 import backtype.storm.topology.BasicOutputCollector;
 import backtype.storm.topology.OutputFieldsDeclarer;
@@ -50,8 +49,15 @@ public class GDailyRemainBolt extends BaseBasicBolt {
         if (host != null) {
 
             String todayStr = date.timestamp2str(logtime, "yyyyMMdd");
+            Long todayStamp = date.str2timestamp(todayStr);
             int someday[]={1,2,3,4,5,6,7,14,30};
             List<String> sqls = new ArrayList<String>();
+
+            Map<String,Object> insert = new HashMap<String, Object>();
+            Map<String,Object> update = new HashMap<String, Object>();
+            insert.put("platform",platform_id);
+            insert.put("server",server_id);
+            insert.put("date",todayStamp);
 
             for (int day : someday) {
                 Long somedayStamp = logtime - day * 24 * 60 * 60;
@@ -64,7 +70,7 @@ public class GDailyRemainBolt extends BaseBasicBolt {
                 String someday_char = "login:" + PSG + ":" + somedayStr + ":newchar:set";
 
                 if (_jedis.sismember(someday_char, uname)) {
-                    _jedis.sadd(dailyremain,uname);
+                    _jedis.sadd(dailyremain, uname);
                     //===============================广告用户================================
                     String hash_key = "gadinfo-" + platform_id + "-" + uname;
                     if (_jedis.exists(hash_key)) {
@@ -75,24 +81,33 @@ public class GDailyRemainBolt extends BaseBasicBolt {
 
                         if (Integer.parseInt(adplanning_id) > 0) {
                             String addailyremain = "addailyremain:"+ PSG + ":" + adplanning_id + ":" + chunion_subid + ":" + todayStr + ":" + day + ":set";
-                            _jedis.sadd(addailyremain,uname);
+                            _jedis.sadd(addailyremain, uname);
 
                             Long adata = _jedis.scard(addailyremain);
-                            String adsql = "INSERT INTO `adplanning_dailyRemain` (`adplanning_id`,`chunion_subid`,`platform`,`server`,`date`,`day" + day + "`) VALUES(" + adplanning_id + "," + chunion_subid + ","+platform_id + "," + server_id + "," + somedayStamp + "," + adata +") ON DUPLICATE KEY UPDATE `day" + day + "` = " + adata;
+                            String adsql = "INSERT INTO `adplanning_dailyRemain` (`adplanning_id`,`chunion_subid`,`platform`,`server`,`date`,`day" + day + "`) VALUES(" + adplanning_id + "," + chunion_subid + ","+platform_id + "," + server_id + "," + todayStamp + "," + adata +") ON DUPLICATE KEY UPDATE `day" + day + "` = " + adata+";";
                             sqls.add(adsql);
                         }
                     }
                 }
                 Long data = _jedis.scard(dailyremain);
-                String sql = "INSERT INTO `opdata_dailyRemain` (`platform`,`server`,`date`,`day" + day + "`) VALUES(" + platform_id + "," + server_id + "," + somedayStamp + "," + data +") ON DUPLICATE KEY UPDATE `day" + day + "` = " + data;
-                sqls.add(sql);
+                insert.put("day"+day,data);
+                update.put("day"+day,data);
+//                String sql = "INSERT INTO `opdata_dailyRemain` (`platform`,`server`,`date`,`day" + day + "`) VALUES(" + platform_id + "," + server_id + "," + todayStamp + "," + data +") ON DUPLICATE KEY UPDATE `day" + day + "` = " + data+";";
+//                sqls.add(sql);
                 System.out.println("第" + day + "日留存：" + data);
             }
+
             String port = _prop.getProperty("game." + game_abbr + ".mysql_port");
             String db = _prop.getProperty("game." + game_abbr + ".mysql_db");
             String user = _prop.getProperty("game." + game_abbr + ".mysql_user");
             String passwd = _prop.getProperty("game." + game_abbr + ".mysql_passwd");
             JdbcMysql con = JdbcMysql.getInstance(game_abbr, host, port, db, user, passwd);
+
+            Map<String, Map<String, Object>> data = new HashMap<String, Map<String, Object>>();
+            data.put("insert", insert);
+            data.put("update",update);
+            String sql = con.setSql("replace", "opdata_dailyRemain", data);
+            sqls.add(sql);
             con.batchAdd(sqls);
         }
     }

@@ -12,20 +12,17 @@ import backtype.storm.topology.TopologyBuilder;
 
 import storm.kafka.*;
 
-import storm.qule_game.bolt.LvdistBolt;
 import storm.qule_game.bolt.LvdistCalcBolt;
-import storm.qule_game.bolt.LvdistVeriBolt;
+import storm.qule_game.bolt.LvdistFilterBolt;
 import storm.qule_game.spout.LvdistSpout;
 
 import java.io.IOException;
-
-
 public class LvdistTopology {
     public static void main(String[] args) throws /*Exception*/AlreadyAliveException, InvalidTopologyException, InterruptedException, IOException {
         TopologyBuilder builder = new TopologyBuilder();
 
-        builder.setBolt("glvdist_calc_bolt", new LvdistVeriBolt()).shuffleGrouping("glvdist_spout");
-        builder.setBolt("glvdist_veri_bolt", new LvdistCalcBolt()).shuffleGrouping("glvdist_calc_bolt");
+        builder.setBolt("glvdist_filter_bolt", new LvdistFilterBolt(),1).shuffleGrouping("glvdist_spout");
+        builder.setBolt("glvdist_calc_bolt", new LvdistCalcBolt(),1).shuffleGrouping("glvdist_filter_bolt");
 
         Config conf = new Config();
         conf.setDebug(true);
