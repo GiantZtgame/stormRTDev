@@ -2,68 +2,63 @@ package storm.qule_game.bolt;
 /**
  * Created by zhanghang on 2014/7/15.
  */
-
 import backtype.storm.task.TopologyContext;
 import backtype.storm.topology.BasicOutputCollector;
 import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.topology.base.BaseBasicBolt;
+import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Tuple;
+import backtype.storm.tuple.Values;
+
+import com.twitter.chill.java.ArraysAsListSerializer;
 import redis.clients.jedis.Jedis;
-import storm.qule_util.*;
+
+import storm.qule_util.JdbcMysql;
+import storm.qule_util.date;
+import storm.qule_util.jedisUtil;
+
 import java.util.*;
+
 
 public class AdRealtimeCalcBolt extends BaseBasicBolt {
     private Jedis _jedis;
-    private static Properties _prop = new Properties();
-
-    private static timerCfgLoader _gamecfgLoader = new timerCfgLoader();
-    private static cfgLoader _cfgLoader = new cfgLoader();
-    private static String _gamecfg;
 
     /**
-     * 加载配置文件
-     * @param stormConf
+     * @param conf
      * @param context
      */
-    public void prepare(Map stormConf, TopologyContext context) {
-        Boolean isOnline = Boolean.parseBoolean(stormConf.get("isOnline").toString());
-        if (isOnline) {
-            _gamecfg = stormConf.get("gamecfg_path").toString();
-        }
-        else {
-            _gamecfg = "/config/test.games.properties";
-        }
-        _prop = _cfgLoader.loadConfig(_gamecfg, isOnline);
-        _jedis = new jedisUtil().getJedis(_prop.getProperty("redis.host"), Integer.parseInt(_prop.getProperty("redis.port")));
+    public void prepare(Map conf, TopologyContext context) {
+        _jedis = new jedisUtil().getJedis(conf.get("redis.host").toString(), Integer.parseInt(conf.get("redis.port").toString()));
     }
     @Override
     public void execute(Tuple tuple , BasicOutputCollector collector) {
-        //refresh gamecfg
-        _prop = _gamecfgLoader.loadCfg(_gamecfg, _prop);
         //[AHSG, 100, 1, 2013-11-25 08:34:48, adreg, 100, 0, 127.0.0.1, testaccount]
         String game_abbr = tuple.getStringByField("game_abbr");
-        String platform = tuple.getStringByField("platform");
-        String server = tuple.getStringByField("server");
+//        String platform = tuple.getStringByField("platform");
+//        String server = tuple.getStringByField("server");
         String logtime = tuple.getStringByField("logtime");
         String keywords = tuple.getStringByField("keywords");
         String adplanning_id = tuple.getStringByField("adplanning_id");
         String chunion_subid = tuple.getStringByField("chunion_subid");
         String ip = tuple.getStringByField("ip");
         String uname = tuple.getStringByField("uname");
+
         //logtime 2013-11-25 08:34:48
-        Long nowtime = date.str2timestamp(logtime);
-        String todayStr = date.timestamp2str(nowtime, "yyyyMMdd");
-        Long tis_datetime_5m = nowtime - nowtime % 300;
-        Long tis_datetime_1h = nowtime - nowtime % 3600;
-        //adrealtime
-        String REAL = adplanning_id + ":" +chunion_subid;
+        Long logtimestamp = date.str2timestamp(logtime);
+        String todayStr = date.timestamp2str(logtimestamp, "yyyyMMdd");
+        Long tis_datetime_5m = logtimestamp - logtimestamp % 300;
+        Long tis_datetime_1h = logtimestamp - logtimestamp % 3600;
+
+        String R5M = adplanning_id + ":" +chunion_subid + ":" + tis_datetime_5m;
+        String R1H = adplanning_id + ":" +chunion_subid + ":" + tis_datetime_1h;
+
         //redis key
-        String r_adreg_5m = "adreg:" + REAL +":" + tis_datetime_5m+ ":incr";
-        String r_adreg_1h = "adreg:" + REAL +":" + tis_datetime_1h+ ":incr";
-        String r_adex_ip_5m = "adex:" + REAL +":" + tis_datetime_5m+ ":ip:set";
-        String r_adex_ip_1h = "adex:" + REAL +":" + tis_datetime_1h+ ":ip:set";
-        String r_adex_pv_5m = "adex:" + REAL +":" + tis_datetime_5m+ ":pv:incr";
-        String r_adex_pv_1h = "adex:" + REAL +":" + tis_datetime_1h+ ":pv:incr";
+        String r_adreg_5m = "adreg:" + R5M + ":incr";
+        String r_adreg_1h = "adreg:" + R1H + ":incr";
+        String r_adex_ip_5m = "adex:" + R5M + ":ip:set";
+        String r_adex_ip_1h = "adex:" + R1H + ":ip:set";
+        String r_adex_pv_5m = "adex:" + R5M + ":pv:incr";
+        String r_adex_pv_1h = "adex:" + R1H + ":pv:incr";
         //注册
         //记录5分钟和1小时时间段注册人数
         if (keywords.equals("adreg")) {
@@ -97,34 +92,13 @@ public class AdRealtimeCalcBolt extends BaseBasicBolt {
         Long adex_ip_5m = _jedis.scard(r_adex_ip_5m);
         Long adex_ip_1h = _jedis.scard(r_adex_ip_1h);
 
-        System.out.println("=============="+platform+":"+server+":"+REAL+"================");
-        System.out.println("5m广告注册数：" + adreg_5m);
-        System.out.println("1h广告注册数：" + adreg_1h);
-        System.out.println("5m广告弹出pv：" + adex_pv_5m + "  5m广告弹出ip：" + adex_ip_5m);
-        System.out.println("1h广告弹出pv：" + adex_pv_1h + "  1h广告弹出ip：" + adex_ip_1h);
-        //数据库60s更新一次
-        Long uptime = date.str2timestamp(todayStr+" 23:59:00");
-        if (nowtime > uptime) {
-            _jedis.del("timer:adrealtime:60s");
-        }
-        if (!_jedis.exists("timer:adrealtime:60s")) {
-            String host = _prop.getProperty("game." + game_abbr + ".mysql_host");
-            String port = _prop.getProperty("game." + game_abbr + ".mysql_port");
-            String db = _prop.getProperty("game." + game_abbr + ".mysql_db");
-            String user = _prop.getProperty("game." + game_abbr + ".mysql_user");
-            String passwd = _prop.getProperty("game." + game_abbr + ".mysql_passwd");
-            JdbcMysql con = JdbcMysql.getInstance(game_abbr, host, port, db, user, passwd);
-            String tablename = "ad_realtime_" + todayStr;
-            String checkTable = "CREATE TABLE IF NOT EXISTS `" + db + "`.`" + tablename + "`(`id` int(11) unsigned NOT NULL AUTO_INCREMENT,`adplanning_id` int(11) unsigned NOT NULL COMMENT '主线ID',`chunion_subid` int(11) unsigned NOT NULL DEFAULT '0' COMMENT '网盟子渠道ID，没有即为0',`datetime` int(11) unsigned NOT NULL COMMENT '时间点，默认5分钟间隔',`duration_type` tinyint(3) unsigned NOT NULL COMMENT '间隔类型：1:5分钟, 2:1小时',`p_reg` int(11) unsigned NOT NULL DEFAULT '0' COMMENT '该时间段内的平台注册',`characters` int(11) unsigned NOT NULL COMMENT '该时间段内的激活',`ip` int(11) unsigned NOT NULL COMMENT '该时间段内的独立IP',`pv` int(11) unsigned NOT NULL COMMENT '该时间段内的PV',PRIMARY KEY (`id`),UNIQUE KEY `adplanning_id` (`adplanning_id`,`chunion_subid`,`datetime`,`duration_type`)) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8 COMMENT='广告实时数据'";
-            String sql_5m = "INSERT INTO `"+tablename+"` (`adplanning_id`, `chunion_subid`, `datetime`, `duration_type`, `p_reg`, `characters`, `ip`,`pv`) VALUES (" + adplanning_id + ", " + chunion_subid + ", " +tis_datetime_5m + ", 1 , " + adreg_5m + ", 0, " + adex_ip_5m + ", " + adex_pv_5m+ " ) ON DUPLICATE KEY UPDATE `p_reg`="+adreg_5m+",`ip`="+adex_ip_5m+",`pv`="+adex_pv_5m;
-            String sql_1h = "INSERT INTO `"+tablename+"` (`adplanning_id`, `chunion_subid`,`datetime`, `duration_type`, `p_reg`, `characters`, `ip`,`pv`) VALUES (" + adplanning_id + ", " + chunion_subid + ", " +tis_datetime_1h + ", 2 , " + adreg_1h + ",0, " + adex_ip_1h + ", " + adex_pv_1h+ " ) ON DUPLICATE KEY UPDATE `p_reg`="+adreg_1h+",`ip`="+adex_ip_1h+",`pv`="+adex_pv_1h;
-            //=======================sql批量插入================================
-            List<String> sqls = Arrays.asList(checkTable,sql_5m,sql_1h);
-            if (con.batchAdd(sqls)) {
-                System.out.println("******* Success ********");
-                _jedis.setex("timer:adrealtime:60s", 60, "1");
-            }
-        }
+        String tablename = "ad_realtime_" + todayStr;
+        String sql_5m = "INSERT INTO `"+tablename+"` (`adplanning_id`, `chunion_subid`, `datetime`, `duration_type`, `p_reg`, `characters`, `ip`,`pv`) VALUES (" + adplanning_id + ", " + chunion_subid + ", " +tis_datetime_5m + ", 1 , " + adreg_5m + ", 0, " + adex_ip_5m + ", " + adex_pv_5m+ " ) ON DUPLICATE KEY UPDATE `p_reg`="+adreg_5m+",`ip`="+adex_ip_5m+",`pv`="+adex_pv_5m+";";
+        String sql_1h = "INSERT INTO `"+tablename+"` (`adplanning_id`, `chunion_subid`,`datetime`, `duration_type`, `p_reg`, `characters`, `ip`,`pv`) VALUES (" + adplanning_id + ", " + chunion_subid + ", " +tis_datetime_1h + ", 2 , " + adreg_1h + ",0, " + adex_ip_1h + ", " + adex_pv_1h+ " ) ON DUPLICATE KEY UPDATE `p_reg`="+adreg_1h+",`ip`="+adex_ip_1h+",`pv`="+adex_pv_1h+";";
+
+        collector.emit(new Values(game_abbr,tablename,sql_5m,sql_1h));
     }
-    public void declareOutputFields(OutputFieldsDeclarer declarer) {}
+    public void declareOutputFields(OutputFieldsDeclarer declarer) {
+        declarer.declare(new Fields("game_abbr","tablename","sql_5m","sql_1h"));
+    }
 }

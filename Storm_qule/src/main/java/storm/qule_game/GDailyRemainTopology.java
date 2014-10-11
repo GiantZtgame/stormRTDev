@@ -8,7 +8,6 @@ import backtype.storm.topology.TopologyBuilder;
 import storm.kafka.*;
 import storm.qule_game.bolt.*;
 import storm.qule_game.spout.SampleGloginSpout;
-
 /**
  * Created by zhanghang on 2014/7/29.
  */
@@ -16,8 +15,8 @@ public class GDailyRemainTopology {
     public static void main(String[]    args) throws Exception {
         TopologyBuilder builder = new TopologyBuilder();
 
-        builder.setBolt("dremain_verify_bolt", new GLoginVeriBolt(), 10).shuffleGrouping("dailyremain_spout");
-        builder.setBolt("dremain_calc_bolt", new GDailyRemainBolt(), 10).shuffleGrouping("dremain_verify_bolt");
+        builder.setBolt("dremain_verify_bolt", new GLoginVeriBolt(), 1).shuffleGrouping("dailyremain_spout");
+        builder.setBolt("dremain_calc_bolt", new GDailyRemainBolt(), 1).shuffleGrouping("dremain_verify_bolt");
 
         Config conf = new Config();
         conf.setDebug(true);

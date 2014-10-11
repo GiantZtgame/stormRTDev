@@ -10,25 +10,31 @@ import backtype.storm.generated.InvalidTopologyException;
 import backtype.storm.spout.SchemeAsMultiScheme;
 import backtype.storm.topology.TopologyBuilder;
 import storm.kafka.*;
-import storm.qule_game.bolt.AdRealtimeBolt;
-import storm.qule_game.bolt.AdRealtimeCalcBolt;
-import storm.qule_game.bolt.AdRealtimeVeriBolt;
-import storm.qule_game.bolt.AdRefBolt;
+
+import storm.qule_game.bolt.*;
 import storm.qule_game.spout.AdRealtimeSpout;
 
 import java.io.IOException;
+
+
 public class AdRealtimeTopology {
     public static void main(String[] args) throws /*Exception*/AlreadyAliveException, InvalidTopologyException, InterruptedException, IOException {
         TopologyBuilder builder = new TopologyBuilder();
-        builder.setBolt("adrealtime_veri_bolt", new AdRealtimeVeriBolt()).shuffleGrouping("adrealtime_spout");
-        builder.setBolt("adrealtime_calc_bolt", new AdRealtimeCalcBolt()).shuffleGrouping("adrealtime_veri_bolt");
-        builder.setBolt("adref_bolt", new AdRefBolt()).shuffleGrouping("adrealtime_veri_bolt");
+        //过滤源数据
+        builder.setBolt("adrealtime_filter_bolt", new AdRealtimeFilterBolt(),10).shuffleGrouping("adrealtime_spout");
+
+        //处理数据
+        builder.setBolt("adrealtime_calc_bolt", new AdRealtimeCalcBolt(),10).shuffleGrouping("adrealtime_filter_bolt");
+        builder.setBolt("adref_calc_bolt", new AdRefCalcBolt(),14).shuffleGrouping("adrealtime_filter_bolt");
+
+        //记录数据库
+        builder.setBolt("adrealtime_mysql_bolt", new AdRealtimeMysqlBolt(),1).shuffleGrouping("adrealtime_calc_bolt");
+        builder.setBolt("adref_mysql_bolt", new AdRefMysqlBolt(),1).shuffleGrouping("adref_calc_bolt");
 
         Config conf = new Config();
         conf.setDebug(true);
         //集群模式
         if (args != null && args.length > 0) {
-            conf.put("isOnline",true);
             String gamecfg_path = "";
             try {
                 gamecfg_path = args[1];
@@ -37,7 +43,10 @@ public class AdRealtimeTopology {
                 e.printStackTrace();
                 System.exit(-999);
             }
+            conf.put("isOnline", true);
             conf.put("gamecfg_path", gamecfg_path);
+            conf.put("redis.host","172.29.201.205");
+            conf.put("redis.port",6379);
 
             String topic = "adrealtime";
             String zkRoot = "/home/ztgame/storm/zkroot";
@@ -51,13 +60,17 @@ public class AdRealtimeTopology {
             StormSubmitter.submitTopologyWithProgressBar(args[0], conf, builder.createTopology());
         //本地模式
         } else {
-            conf.put("isOnline",false);
+            conf.put("isOnline", false);
+            conf.put("gamecfg_path", "/config/test.games.properties");
+            conf.put("redis.host","localhost");
+            conf.put("redis.port",6379);
+
             builder.setSpout("adrealtime_spout", new AdRealtimeSpout());
             conf.put(Config.TOPOLOGY_MAX_SPOUT_PENDING, 1);
             conf.setMaxTaskParallelism(1);
             LocalCluster cluster = new LocalCluster();
             cluster.submitTopology("adrealtime", conf, builder.createTopology());
-            Thread.sleep(10000);
+            Thread.sleep(30000);
             cluster.shutdown();
         }
     }

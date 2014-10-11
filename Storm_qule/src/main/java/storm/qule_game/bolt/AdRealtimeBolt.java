@@ -311,7 +311,7 @@ public class AdRealtimeBolt extends BaseBasicBolt {
                         sqls.add(sql_1h);
                         sqls.add(sql);
 
-                        if (con.batchAdd(sqls)) {
+                        con.batchAdd(sqls);
                             //重新计时
                             if (!_jedis.exists("timer:adrealtime:5m")) {
                                 _jedis.setex("timer:adrealtime:5m", 5 * 60, "1");
@@ -329,7 +329,6 @@ public class AdRealtimeBolt extends BaseBasicBolt {
                             }
                             System.out.println("******* Success ********");
                             _jedis.setex("timer:adrealtime:60s", 60, "1");
-                        }
                     }
                 }
             }

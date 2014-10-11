@@ -12,7 +12,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-
 public class LvdistCalcBolt extends BaseBasicBolt {
     private static Properties _prop = new Properties();
 
@@ -51,7 +50,6 @@ public class LvdistCalcBolt extends BaseBasicBolt {
         String keywords = tuple.getStringByField("keywords");
 
         System.out.println("============="+platform + ":" + server + ":" + game_abbr+":lvdist==============");
-
         //datetime 当天时间戳
         Long datetime = date.str2timestamp(todayStr);
         List<String> sqls = new ArrayList<String>();
@@ -73,21 +71,18 @@ public class LvdistCalcBolt extends BaseBasicBolt {
                         server + ", " + datetime + "," + level + ", " + num + " ) ON DUPLICATE KEY UPDATE " +
                         "`" + lvDbCol + "`=" + level + ",`num`=" + num;
                 sqls.add(sql);
-
                 System.out.println(lvDbCol + " " + level + "级人数：" + num);
             }
         }
-        System.out.println("======================================");
-
         String host = _prop.getProperty("game." + game_abbr + ".mysql_host");
         String port = _prop.getProperty("game." + game_abbr + ".mysql_port");
         String db = _prop.getProperty("game." + game_abbr + ".mysql_db");
         String user = _prop.getProperty("game." + game_abbr + ".mysql_user");
         String passwd = _prop.getProperty("game." + game_abbr + ".mysql_passwd");
         JdbcMysql con = JdbcMysql.getInstance(game_abbr, host, port, db, user, passwd);
-
         con.batchAdd(sqls);
         System.out.println("*********** Success ************");
+
     }
     public void declareOutputFields(OutputFieldsDeclarer declarer) {}
 }
