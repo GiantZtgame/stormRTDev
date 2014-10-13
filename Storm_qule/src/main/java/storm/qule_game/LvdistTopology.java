@@ -21,8 +21,8 @@ public class LvdistTopology {
     public static void main(String[] args) throws /*Exception*/AlreadyAliveException, InvalidTopologyException, InterruptedException, IOException {
         TopologyBuilder builder = new TopologyBuilder();
 
-        builder.setBolt("glvdist_filter_bolt", new LvdistFilterBolt(),1).shuffleGrouping("glvdist_spout");
-        builder.setBolt("glvdist_calc_bolt", new LvdistCalcBolt(),1).shuffleGrouping("glvdist_filter_bolt");
+        builder.setBolt("glvdist_filter_bolt", new LvdistFilterBolt(),2).shuffleGrouping("glvdist_spout");
+        builder.setBolt("glvdist_calc_bolt", new LvdistCalcBolt(),2).shuffleGrouping("glvdist_filter_bolt");
 
         Config conf = new Config();
         conf.setDebug(true);
