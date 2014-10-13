@@ -199,9 +199,9 @@ public class GLoginCalcBolt extends BaseBasicBolt {
                     String hourlyLoginDbCol = "LT" + curHour;
                     String hourlyNewLoginDbCol = "NLT" + curHour;
                     String hourlyLoginSql = String.format("INSERT INTO opdata_signinLogin_hourly_today (platform, server, date, joblyLogins, %s, %s) " +
-                            "VALUES (%s, %s, %d, %s, %d, %d) ON DUPLICATE KEY UPDATE %s=%d, %s=%d;", hourlyLoginDbCol, hourlyNewLoginDbCol,
+                            "VALUES (%s, %s, %d, '%s', %d, %d) ON DUPLICATE KEY UPDATE %s=%d, %s=%d, joblyLogins='%s';", hourlyLoginDbCol, hourlyNewLoginDbCol,
                             platform_id, server_id, datetime, joblyLoginJson, hourlyLoginCounts, hourlyNewLoginCounts, hourlyLoginDbCol, hourlyLoginCounts,
-                            hourlyNewLoginDbCol, hourlyNewLoginCounts);
+                            hourlyNewLoginDbCol, hourlyNewLoginCounts, joblyLoginJson);
 System.out.println(hourlyLoginSql);
                     if (con.add(hourlyLoginSql)) {
                         System.out.println("*********** hourlyLoginSql Success ************");
