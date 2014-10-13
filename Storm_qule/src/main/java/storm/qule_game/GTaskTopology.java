@@ -20,8 +20,8 @@ import java.io.IOException;
 public class GTaskTopology {
     public static void main(String[] args) throws /*Exception*/AlreadyAliveException, InvalidTopologyException, InterruptedException, IOException {
         TopologyBuilder builder = new TopologyBuilder();
-        builder.setBolt("gtask_veri_bolt", new GTaskVeriBolt(),1).shuffleGrouping("gtask_spout");
-        builder.setBolt("gtask_calc_bolt", new GTaskCalcBolt(),1).shuffleGrouping("gtask_veri_bolt");
+        builder.setBolt("gtask_veri_bolt", new GTaskVeriBolt(),10).shuffleGrouping("gtask_spout");
+        builder.setBolt("gtask_calc_bolt", new GTaskCalcBolt(),10).shuffleGrouping("gtask_veri_bolt");
 
         Config conf = new Config();
         conf.setDebug(true);
