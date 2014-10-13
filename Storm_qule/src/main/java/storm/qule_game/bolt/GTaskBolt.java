@@ -220,9 +220,8 @@ public class GTaskBolt extends BaseBasicBolt {
                         }
                     }
 
-                    if (con.batchAdd(sqls)) {
+                    con.batchAdd(sqls);
                         System.out.println("*********** Success ************");
-                    }
                 }
             }
         }

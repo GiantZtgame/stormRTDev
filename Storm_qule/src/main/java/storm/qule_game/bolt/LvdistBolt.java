@@ -115,10 +115,9 @@ public class LvdistBolt extends BaseBasicBolt {
                                         "`level`=" + entry.getKey() + ",`num`=" + entry.getValue();
                                 sqls.add(sql);
                             }
-                            if (con.batchAdd(sqls)) {
+                            con.batchAdd(sqls);
                                 System.out.println("*********** Success ************");
                                 _jedis.setex("timer:lvdist:5m", 5 * 60, "1");
-                            }
                         }
                     }
                 }
