@@ -91,7 +91,7 @@ System.out.println("+++++++ GCurrencyPreserve verify prepare!!!");
                         if ("money1".equals(currency_split[0])) {
                             money1 = Long.parseLong(currency_split[1]);
                         } else if ("money2".equals(currency_split[0])) {
-                            money2 = Long.parseLong(currency_split[1]);
+                            money2 = Long.parseLong(currency_split[1]) / 1000000;
                         }
                     }
                 }
