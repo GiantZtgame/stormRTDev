@@ -179,6 +179,6 @@ public class GRegCalcBolt extends BaseBasicBolt {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("game_abbr", "platform_id", "server_id", "todayDate", "datetime", "count1", "countip", "hour", "count2", "job_id", "count3"));
+        declarer.declare(new Fields("game_abbr", "platform_id", "server_id", "todayDate", "datetime", "count1", "countip", "hour", "count2", "job_id", "count3", "joblyLoginJson"));
     }
 }
