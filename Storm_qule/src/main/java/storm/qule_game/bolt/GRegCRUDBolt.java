@@ -74,11 +74,14 @@ System.out.println("@@@@@@ CRUDPRegData prepare!!");
         int count2 = tuple.getInteger(8);
         String job_id = tuple.getString(9);
         int count3 = tuple.getInteger(10);
+        String joblyLoginJson = tuple.getString(11);
 
         String jobRegDbCol = (String) _jobList.get(Integer.parseInt(job_id));
         String hourlyRegDbCol = "T"+hour;
 
         String ins_sql = String.format("INSERT INTO opdata_signinLogin_today (platform, server, date, up_time, %s, daily_characters, %s) VALUES (%s, %s, %d, %d, %d, %d, %d) ON DUPLICATE KEY UPDATE up_time=%d, %s=%d, daily_characters=%d, %s=%d;", jobRegDbCol, hourlyRegDbCol, platform_id, server_id, todayDate, datetime, count3, count1, count2, datetime, jobRegDbCol, count3, count1, hourlyRegDbCol, count2);
+        String joblyLoginSql = String.format("INSERT INTO opdata_signinLogin_hourly_today (platform, server, date, joblyLogins) " +
+                        "VALUES (%s, %s, %d, '%s') ON DUPLICATE KEY UPDATE joblyLogins='%s';", platform_id, server_id, datetime, joblyLoginJson, joblyLoginJson);
 
         //flush to mysql
         String mysql_host = _prop.getProperty("game." + game_abbr + ".mysql_host");
@@ -94,6 +97,13 @@ System.out.println("@@@@@@ CRUDPRegData prepare!!");
                 System.out.println(ins_sql);
                 sql_ret = _dbconnect.DirectUpdate(game_abbr, ins_sql);
                 System.out.println(sql_ret);
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+            try {
+System.out.println(joblyLoginSql);
+                sql_ret = _dbconnect.DirectUpdate(game_abbr, joblyLoginSql);
+System.out.println(sql_ret);
             } catch (SQLException e) {
                 e.printStackTrace();
             }

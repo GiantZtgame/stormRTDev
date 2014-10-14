@@ -7,6 +7,8 @@ import backtype.storm.topology.base.BaseBasicBolt;
 import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Tuple;
 import backtype.storm.tuple.Values;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import redis.clients.jedis.Jedis;
 import storm.qule_game.GRechargeTopology;
 import storm.qule_util.cfgLoader;
@@ -146,7 +148,32 @@ public class GRegCalcBolt extends BaseBasicBolt {
             pairs.put("job", job_id);
             _jedis.hmset(hashKey, pairs);
 
-            collector.emit(new Values(game_abbr, platform_id, server_id, todayDate, datetime, count1, countip, hour, count2, job_id, count3));
+            //按职业登录数
+            String PSG = platform_id + ":" + server_id + ":" + game_abbr;
+            String joblyLoginJsonKey = "login:" + PSG + ":" + todayStr + ":joblychar:incr";
+            String joblyLoginJson = null == _jedis.get(joblyLoginJsonKey) ? "[]" : _jedis.get(joblyLoginJsonKey);
+
+            JSONArray joblyLoginJsonArray = new JSONArray(joblyLoginJson);
+            JSONArray joblyLoginJsonArrayGen = new JSONArray();
+            boolean jidExist = false;
+            for(int i=0 ; i < joblyLoginJsonArray.length() ; i++) {
+                String curJid = joblyLoginJsonArray.getJSONObject(i).getString("jid");
+                Integer charCounts = joblyLoginJsonArray.getJSONObject(i).getInt("cc");
+                if (curJid.equals(job_id)) {
+                    charCounts++;
+                    jidExist = true;
+                }
+                joblyLoginJsonArrayGen.put(new JSONObject().put("jid", curJid).put("cc", charCounts));
+            }
+            if (!jidExist) {
+                joblyLoginJsonArrayGen.put(new JSONObject().put("jid", job_id).put("cc", 1));
+            }
+            joblyLoginJson = joblyLoginJsonArrayGen.toString();
+            _jedis.set(joblyLoginJsonKey, joblyLoginJson);
+            _jedis.expire(joblyLoginJsonKey, 24 * 60 * 60);
+
+
+            collector.emit(new Values(game_abbr, platform_id, server_id, todayDate, datetime, count1, countip, hour, count2, job_id, count3, joblyLoginJson));
         }
     }
 
