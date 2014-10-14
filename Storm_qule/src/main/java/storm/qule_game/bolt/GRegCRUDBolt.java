@@ -81,7 +81,7 @@ System.out.println("@@@@@@ CRUDPRegData prepare!!");
 
         String ins_sql = String.format("INSERT INTO opdata_signinLogin_today (platform, server, date, up_time, %s, daily_characters, %s) VALUES (%s, %s, %d, %d, %d, %d, %d) ON DUPLICATE KEY UPDATE up_time=%d, %s=%d, daily_characters=%d, %s=%d;", jobRegDbCol, hourlyRegDbCol, platform_id, server_id, todayDate, datetime, count3, count1, count2, datetime, jobRegDbCol, count3, count1, hourlyRegDbCol, count2);
         String joblyLoginSql = String.format("INSERT INTO opdata_signinLogin_hourly_today (platform, server, date, joblyLogins) " +
-                        "VALUES (%s, %s, %d, '%s') ON DUPLICATE KEY UPDATE joblyLogins='%s';", platform_id, server_id, datetime, joblyLoginJson, joblyLoginJson);
+                        "VALUES (%s, %s, %d, '%s') ON DUPLICATE KEY UPDATE joblyLogins='%s';", platform_id, server_id, todayDate, joblyLoginJson, joblyLoginJson);
 
         //flush to mysql
         String mysql_host = _prop.getProperty("game." + game_abbr + ".mysql_host");
