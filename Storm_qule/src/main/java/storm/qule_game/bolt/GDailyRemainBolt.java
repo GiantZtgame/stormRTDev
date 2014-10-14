@@ -108,7 +108,7 @@ public class GDailyRemainBolt extends BaseBasicBolt {
                 Long rechargeRemainData = _jedis.scard(rechargeDailyremainKey);
                 String rechargeRemainDbCol = "day" + day;
                 String rechargeRemainSql = String.format("INSERT INTO `opdata_recharge_dailyRemain` (platform, server, date, %s) VALUES " +
-                        "(%s, %s, %d, %d) ON DUPLICATE KEY UPDATE %s=%d;", rechargeRemainDbCol, platform_id, server_id, somedayStamp,
+                        "(%s, %s, %d, %d) ON DUPLICATE KEY UPDATE %s=%d;", rechargeRemainDbCol, platform_id, server_id, todayStamp,
                         rechargeRemainData, rechargeRemainDbCol, rechargeRemainData);
                 sqls.add(rechargeRemainSql);
                 System.out.println("第" + day + "日充值留存：" + rechargeRemainData);
