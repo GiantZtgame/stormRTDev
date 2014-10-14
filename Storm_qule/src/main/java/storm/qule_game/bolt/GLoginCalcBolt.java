@@ -127,18 +127,11 @@ public class GLoginCalcBolt extends BaseBasicBolt {
                             joblyLoginJsonArrayGen.put(new JSONObject().put("jid", jid).put("cc", 1));
                         }
                         joblyLoginJson = joblyLoginJsonArrayGen.toString();
+                        _jedis.set(joblyLoginJsonKey, joblyLoginJson);
+                        _jedis.expire(joblyLoginJsonKey, 24 * 60 * 60);
                         joblyLoginFlag = true;
                     }
                 }
-                //按时段新登数
-                Integer hourlyNewLoginCounts = null == _jedis.get(hourlyNewLoginCountsKey) ? 0 : Integer.parseInt(_jedis.get(hourlyNewLoginCountsKey));
-                if (!_jedis.sismember(new_char, uname)) {
-                    hourlyNewLoginCounts++;
-                    _jedis.set(hourlyNewLoginCountsKey, hourlyNewLoginCounts.toString());
-                    _jedis.expire(hourlyNewLoginCountsKey, 24 * 60 * 60);
-                    hourlyLoginFlag = true;
-                }
-
 
                 //新增ip数
                 if (_jedis.sadd(tt_ip,ip) == 1l) {
@@ -148,6 +141,15 @@ public class GLoginCalcBolt extends BaseBasicBolt {
                 //新增账号
                 if (_jedis.sadd(tt_char,uname) == 1l) {
                     _jedis.sadd(new_char,uname);
+                }
+
+                //按时段新登数
+                Integer hourlyNewLoginCounts = null == _jedis.get(hourlyNewLoginCountsKey) ? 0 : Integer.parseInt(_jedis.get(hourlyNewLoginCountsKey));
+                if (_jedis.sismember(new_char, uname) && !_jedis.sismember(td_char, uname)) {
+                    hourlyNewLoginCounts++;
+                    _jedis.set(hourlyNewLoginCountsKey, hourlyNewLoginCounts.toString());
+                    _jedis.expire(hourlyNewLoginCountsKey, 24 * 60 * 60);
+                    hourlyLoginFlag = true;
                 }
 
                 _jedis.sadd(td_ip, ip);
