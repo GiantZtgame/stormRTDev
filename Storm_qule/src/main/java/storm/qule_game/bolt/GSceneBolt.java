@@ -6,6 +6,7 @@ import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.topology.base.BaseBasicBolt;
 import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Tuple;
+import backtype.storm.utils.Utils;
 import redis.clients.jedis.Jedis;
 import storm.qule_util.*;
 
@@ -122,6 +123,8 @@ public class GSceneBolt extends BaseBasicBolt {
                 String level = logs[8];
 
                 if (token_gen.equals(token) && log_type.equals(LOG_SCENE_START_LOADING_SIGN)) {
+                    Utils.sleep(100);
+
                     String sceneStartLoadingListKey = "sceneStartLoading:" + game_abbr + ":" + platform_id + ":" + server_id + ":" + todayStr + ":set";
 
                     if (!_jedis.sismember(sceneStartLoadingListKey, uname)) {
