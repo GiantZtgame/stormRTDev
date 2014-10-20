@@ -12,6 +12,7 @@ import storm.qule_util.*;
 
 import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -123,13 +124,13 @@ public class GSceneBolt extends BaseBasicBolt {
                 String level = logs[8];
 
                 if (token_gen.equals(token) && log_type.equals(LOG_SCENE_START_LOADING_SIGN)) {
-                    Utils.sleep(100);
-
                     String sceneStartLoadingListKey = "sceneStartLoading:" + game_abbr + ":" + platform_id + ":" + server_id + ":" + todayStr + ":set";
 
                     if (!_jedis.sismember(sceneStartLoadingListKey, uname)) {
                         //判断是否为新用户
                         String regkey = "greginfo-" + platform_id + "-" + game_abbr + "-" + server_id + "-" + uname;
+
+                        Utils.sleep(3000);
                         if (_jedis.exists(regkey)) {
                             List userinfo = _jedis.lrange(regkey, 0, 0);
                             String[] userinfoArr = userinfo.get(0).toString().split("-");
@@ -142,6 +143,8 @@ public class GSceneBolt extends BaseBasicBolt {
                                     _jedis.set(sceneStartLoadingKey, sceneStartLoading.toString());
                                     _jedis.expire(sceneStartLoadingKey, 24 * 3600);
                                     ifSceneStartLoadingSql = true;
+
+                                    enterScene = !_jedis.exists(enterSceneKey) ? 0 : Integer.parseInt(_jedis.get(enterSceneKey));
                                 }
                             }
                         }
