@@ -49,26 +49,27 @@ public class GDailyRemainBolt extends BaseBasicBolt {
         if (host != null) {
 
             String todayStr = date.timestamp2str(logtime, "yyyyMMdd");
-            Long todayStamp = date.str2timestamp(todayStr);
+            //Long todayStamp = date.str2timestamp(todayStr);
             int someday[]={1,2,3,4,5,6,7,14,30};
             List<String> sqls = new ArrayList<String>();
 
-            Map<String,Object> insert = new HashMap<String, Object>();
-            Map<String,Object> update = new HashMap<String, Object>();
-            insert.put("platform",platform_id);
-            insert.put("server",server_id);
-            insert.put("date",todayStamp);
+            //Map<String,Object> insert = new HashMap<String, Object>();
+            //Map<String,Object> update = new HashMap<String, Object>();
+            //insert.put("platform",platform_id);
+            //insert.put("server",server_id);
+            //insert.put("date",todayStamp);
 
             for (int day : someday) {
                 Long somedayStamp = logtime - day * 24 * 60 * 60;
                 String somedayStr = date.timestamp2str(somedayStamp, "yyyyMMdd");
+                Long specDayTs = date.str2timestamp(somedayStr);
 
                 //===============================一般用户================================
                 //唯一键
                 String PSG = platform_id + ":" + server_id + ":" + game_abbr;
-                String dailyremain = "gdailyremain:" + PSG + ":" + todayStr + ":" + day + ":set";
+                String dailyremain = "gdailyremain:" + PSG + ":" + somedayStr + ":" + day + ":set";
 
-                String rechargeDailyremainKey = "gRechDailyremain:" + PSG + ":" + todayStr + ":" + day + ":set";
+                String rechargeDailyremainKey = "gRechDailyremain:" + PSG + ":" + somedayStr + ":" + day + ":set";
 
                 String someday_char = "login:" + PSG + ":" + somedayStr + ":newchar:set";
 
@@ -83,11 +84,11 @@ public class GDailyRemainBolt extends BaseBasicBolt {
                         String chunion_subid = adinfo.get(1);
 
                         if (Integer.parseInt(adplanning_id) > 0) {
-                            String addailyremain = "addailyremain:"+ PSG + ":" + adplanning_id + ":" + chunion_subid + ":" + todayStr + ":" + day + ":set";
+                            String addailyremain = "addailyremain:"+ PSG + ":" + adplanning_id + ":" + chunion_subid + ":" + somedayStr + ":" + day + ":set";
                             _jedis.sadd(addailyremain, uname);
 
                             Long adata = _jedis.scard(addailyremain);
-                            String adsql = "INSERT INTO `adplanning_dailyRemain` (`adplanning_id`,`chunion_subid`,`platform`,`server`,`date`,`day" + day + "`) VALUES(" + adplanning_id + "," + chunion_subid + ","+platform_id + "," + server_id + "," + todayStamp + "," + adata +") ON DUPLICATE KEY UPDATE `day" + day + "` = " + adata+";";
+                            String adsql = "INSERT INTO `adplanning_dailyRemain` (`adplanning_id`,`chunion_subid`,`platform`,`server`,`date`,`day" + day + "`) VALUES(" + adplanning_id + "," + chunion_subid + ","+platform_id + "," + server_id + "," + specDayTs + "," + adata +") ON DUPLICATE KEY UPDATE `day" + day + "` = " + adata+";";
                             sqls.add(adsql);
                         }
                     }
@@ -99,16 +100,17 @@ public class GDailyRemainBolt extends BaseBasicBolt {
                     }
                 }
                 Long data = _jedis.scard(dailyremain);
-                insert.put("day"+day,data);
-                update.put("day"+day,data);
-//                String sql = "INSERT INTO `opdata_dailyRemain` (`platform`,`server`,`date`,`day" + day + "`) VALUES(" + platform_id + "," + server_id + "," + todayStamp + "," + data +") ON DUPLICATE KEY UPDATE `day" + day + "` = " + data+";";
-//                sqls.add(sql);
+                //insert.put("day"+day,data);
+                //update.put("day"+day,data);
+                //insert.put("date",specDayTs);
+                String sql = "INSERT INTO `opdata_dailyRemain` (`platform`,`server`,`date`,`day" + day + "`) VALUES(" + platform_id + "," + server_id + "," + specDayTs + "," + data +") ON DUPLICATE KEY UPDATE `day" + day + "` = " + data+";";
+                sqls.add(sql);
                 System.out.println("第" + day + "日留存：" + data);
 
                 Long rechargeRemainData = _jedis.scard(rechargeDailyremainKey);
                 String rechargeRemainDbCol = "day" + day;
                 String rechargeRemainSql = String.format("INSERT INTO `opdata_recharge_dailyRemain` (platform, server, date, %s) VALUES " +
-                        "(%s, %s, %d, %d) ON DUPLICATE KEY UPDATE %s=%d;", rechargeRemainDbCol, platform_id, server_id, todayStamp,
+                        "(%s, %s, %d, %d) ON DUPLICATE KEY UPDATE %s=%d;", rechargeRemainDbCol, platform_id, server_id, specDayTs,
                         rechargeRemainData, rechargeRemainDbCol, rechargeRemainData);
                 sqls.add(rechargeRemainSql);
                 System.out.println("第" + day + "日充值留存：" + rechargeRemainData);
@@ -120,11 +122,12 @@ public class GDailyRemainBolt extends BaseBasicBolt {
             String passwd = _prop.getProperty("game." + game_abbr + ".mysql_passwd");
             JdbcMysql con = JdbcMysql.getInstance(game_abbr, host, port, db, user, passwd);
 
-            Map<String, Map<String, Object>> data = new HashMap<String, Map<String, Object>>();
-            data.put("insert", insert);
-            data.put("update",update);
-            String sql = con.setSql("replace", "opdata_dailyRemain", data);
-            sqls.add(sql);
+            //Map<String, Map<String, Object>> data = new HashMap<String, Map<String, Object>>();
+            //data.put("insert", insert);
+            //data.put("update",update);
+            //String sql = con.setSql("replace", "opdata_dailyRemain", data);
+            //sqls.add(sql);
+//System.out.println(sqls);
             con.batchAdd(sqls);
         }
     }
