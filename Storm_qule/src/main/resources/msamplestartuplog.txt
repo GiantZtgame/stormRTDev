@@ -1,0 +1,3 @@
+GMZQ|1|1|xxxxx|1401235412|mstartup|AABBCCDD|ios/iosjb/android|1.1|Samsungxxx|1920x1080|CMCC|3g|1.1.1.1|shanghai|ios7.1.2|Apple|iPhone 4S
+GMZQ|1|1|xxxxx|1401235412|mstartup|AABBCCDD|ios/iosjb/android|1.1|Samsungxxx|1920x1080|CMCC|3g|1.1.1.1|shanghai|ios7.1.3|Apple|iPhone 4S
+GMZQ|1|1|xxxxx|1401235412|mstartup|AABBCCDD|ios/iosjb/android|1.1|Samsungxxx|1920x1080|CMCC|3g|1.1.1.1|shanghai|ios7.1.4|Apple|iPhone 4S

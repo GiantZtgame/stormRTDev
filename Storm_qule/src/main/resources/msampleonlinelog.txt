@@ -1,0 +1,3 @@
+GMZQ|1|1|xxxxx|1401235412|monline|total|88888|20000
+GMZQ|1|1|xxxxx|1401235412|monline|ios|11111|11111
+GMZQ|1|1|xxxxx|1401235412|monline|android|77777|11111

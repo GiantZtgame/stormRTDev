@@ -2,6 +2,7 @@ package storm.qule_util;
 
 import com.mysql.jdbc.CommunicationsException;
 
+import javax.naming.CommunicationException;
 import javax.swing.plaf.nimbus.State;
 import java.sql.*;
 import java.util.HashMap;
@@ -96,17 +97,23 @@ System.out.println("数据库连接失败:" + e.getMessage());
         String sqls [];
         sqls = sql.split(";");
 
-        _st = mysql._conns.get(game_abbr).createStatement();
+        int[] count = {};
 
-        int i;
-        for(i=0; i<sqls.length; i++) {
-            _st.addBatch(sqls[i]);
+        try {
+            _st = mysql._conns.get(game_abbr).createStatement();
+
+            int i;
+            for (i = 0; i < sqls.length; i++) {
+                _st.addBatch(sqls[i]);
+            }
+
+            //int count = _st.executeUpdate(sql);
+            count = _st.executeBatch();
+            System.out.println("------------------------------executeBatch result: " + count.length);
+            //mysql._conns.get(game_abbr).close();
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
-
-        //int count = _st.executeUpdate(sql);
-        int [] count = _st.executeBatch();
-System.out.println("------------------------------executeBatch result: " + count.length);
-        mysql._conns.get(game_abbr).close();
 
         return count.length>0;
     }

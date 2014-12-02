@@ -1,0 +1,3 @@
+GMZQ|1|1|xxxxx|1401235412|mlevel|testaccount|曼联|100|12345
+GMZQ|1|1|xxxxx|1401235412|mlevel|testaccount|曼联|100|12345
+GMZQ|1|1|xxxxx|1401235412|mlevel|testaccount|曼联|100|12345

@@ -1,0 +1,3 @@
+GMZQ|1|1|xxxxx|1401235412|mreg|AABBCCDD|testaccount|冰岛国家队|1|ios/iosjb/android|1.1|Samsungxxx|1920x1080|CMCC|3g|1.1.1.1|shanghai
+GMZQ|1|1|xxxxx|1401235412|mreg|AABBCCDD|testaccount|冰岛国家队|1|ios/iosjb/android|1.1|Samsungxxx|1920x1080|CMCC|3g|1.1.1.1|shanghai
+GMZQ|1|1|xxxxx|1401235412|mreg|AABBCCDD|testaccount|冰岛国家队|1|ios/iosjb/android|1.1|Samsungxxx|1920x1080|CMCC|3g|1.1.1.1|shanghai
