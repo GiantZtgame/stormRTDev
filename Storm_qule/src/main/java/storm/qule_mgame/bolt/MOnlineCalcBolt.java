@@ -22,6 +22,7 @@ public class MOnlineCalcBolt extends BaseBasicBolt {
     private static mysql _dbconnect = null;
 
     private static timerCfgLoader _gamecfgLoader = new timerCfgLoader();
+    private static timerFlushDb _dbFlushTimer = new timerFlushDb();
     private static cfgLoader _cfgLoader = new cfgLoader();
     private static String _gamecfg;
 
@@ -39,7 +40,7 @@ public class MOnlineCalcBolt extends BaseBasicBolt {
             _gamecfg = "/config/test.games.properties";
         }
         _prop = _cfgLoader.loadConfig(_gamecfg, isOnline);
-        _jedis = new jedisUtil().getJedis(_prop.getProperty("redis.host"), Integer.parseInt(_prop.getProperty("redis.port")));
+        _jedis = new jedisUtil().getJedis(_prop.getProperty("redis.host"), Integer.parseInt(_prop.getProperty("redis.port")), 11);
 
         _dbconnect = new mysql();
 
@@ -84,8 +85,8 @@ public class MOnlineCalcBolt extends BaseBasicBolt {
                 "UNIQUE KEY `platform` (`client`, `platform`, `server`, `datetime`, `version`)" +
                 ") ENGINE=MyISAM DEFAULT CHARSET=utf8;", newonlinert_tb);
         String inssql_newonlinert = String.format("INSERT INTO %s (client, platform, server, datetime, version, online)" +
-                " VALUES (%d, %s, %s, %d, %s, %d) ON DUPLICATE KEY UPDATE online=%d;", newonlinert_tb, client, platform_id,
-                server_id, online_datetime_int, "", online_acc, online_acc);
+                " VALUES (%d, '%s', '%s', %d, '%s', %d) ON DUPLICATE KEY UPDATE online=%d;", newonlinert_tb, client,
+                platform_id, server_id, online_datetime_int, "", online_acc, online_acc);
 
 
         String inssql_overalldatadaily = "";
@@ -131,60 +132,6 @@ public class MOnlineCalcBolt extends BaseBasicBolt {
             _jedis.set(onlinetotalAvgKey, AvgOnline.toString());
             _jedis.expire(onlinetotalAvgKey, 24 * 60 * 60);
 
-
-
-            //================在线趋势：最高/平均在线================
-            Long overallMaxOnline;
-            Integer overallAvgOnline;
-            String overallOnlinetotalMaxKey = "monline:" + game_abbr + ":" + system + ":" + todayStr + ":account:max";
-            String overallOnlinetotalAvgKey = "monline:" + game_abbr + ":" + system + ":" + todayStr + ":account:avg";
-            String overallOnlinetotalSumKey = "monline:" + game_abbr + ":" + system + ":" + todayStr + ":account:sum";
-            String overallOnlinetotalCountKey = "monline:" + game_abbr + ":" + system + ":" + todayStr + ":account:count";
-            String overallOnlineMinuteKey = "monline:" + game_abbr + ":" + system + ":" + todayMinuteStr + ":account:incr";
-
-            //记录本分钟的所有平台/区服在线数
-            Long overallOnlineMinuteAccounts = !_jedis.exists(overallOnlineMinuteKey) ? 0L :
-                    Integer.parseInt(_jedis.get(overallOnlineMinuteKey));
-            overallOnlineMinuteAccounts += online_acc;
-            _jedis.set(overallOnlineMinuteKey, overallOnlineMinuteAccounts.toString());
-            _jedis.expire(overallOnlineMinuteKey, 1 * 60 * 60);
-
-            //获取上一分钟所有平台/区服在线数
-            Long todayLastMinuteDate = "0000".equals(curHourMinute) ? todayMinuteDate : todayMinuteDate - 60;
-            String todayLastMinuteStr = date.timestamp2str(todayLastMinuteDate, "yyyyMMdd-HHmm");
-            String overallOnlineLastMinuteKey = "monline:" + game_abbr + ":" + system + ":" + todayLastMinuteStr +
-                    ":account:incr";
-            Long overallOnlineLastMinuteAccounts = !_jedis.exists(overallOnlineLastMinuteKey) ? 0L :
-                    Integer.parseInt(_jedis.get(overallOnlineLastMinuteKey));
-
-            //当天已记录的最高在线
-            overallMaxOnline = !_jedis.exists(overallOnlinetotalMaxKey) ? 0L :
-                    Integer.parseInt(_jedis.get(overallOnlinetotalMaxKey));
-
-            //比较
-            overallMaxOnline = (overallMaxOnline >= overallOnlineLastMinuteAccounts ?
-                    overallMaxOnline : overallOnlineLastMinuteAccounts);
-            _jedis.set(overallOnlinetotalMaxKey, overallMaxOnline.toString());
-
-            //Long overallSumOnline = !_jedis.exists(overallOnlinetotalSumKey) ? 0L :
-            //        Integer.parseInt(_jedis.get(overallOnlinetotalSumKey));
-            //overallSumOnline += online_acc;
-            Long overallSumOnline = _jedis.incrBy(overallOnlinetotalSumKey, online_acc);
-            _jedis.expire(overallOnlinetotalSumKey, 24 * 60 * 60);
-            //Long overallCountOnline = !_jedis.exists(overallOnlinetotalCountKey) ? 0L :
-            //        Integer.parseInt(_jedis.get(overallOnlinetotalCountKey));
-            //overallCountOnline++;
-            Long overallCountOnline = _jedis.incr(overallOnlinetotalCountKey);
-            _jedis.expire(overallOnlinetotalCountKey, 24 * 60 * 60);
-
-            overallAvgOnline = Math.round(overallSumOnline / overallCountOnline);
-            _jedis.set(overallOnlinetotalAvgKey, overallAvgOnline.toString());
-            _jedis.expire(overallOnlinetotalAvgKey, 24 * 60 * 60);
-
-            inssql_overalldatadaily = String.format("INSERT INTO overalldatadaily (client, platform, date, maxonline," +
-                    "avgonline) VALUES (%d, %s, %d, %d, %d) ON DUPLICATE KEY UPDATE maxonline=%d, avgonline=%d;", client,
-                    platform_id, todayDate, overallMaxOnline, overallAvgOnline, overallMaxOnline, overallAvgOnline);
-
         } else {
             String onlineKey = "monline:" + game_abbr + ":" + system + ":" + platform_id + ":" + server_id + ":" + todayStr +
                     ":" + "" + ":account:";
@@ -224,24 +171,91 @@ public class MOnlineCalcBolt extends BaseBasicBolt {
             _jedis.expire(onlineAvgKey, 24 * 60 * 60);
         }
 
+
+        //================在线趋势：最高/平均在线================
+        Long overallMaxOnline;
+        Integer overallAvgOnline;
+        String overallOnlinetotalMaxKey = "monline:" + game_abbr + ":" + system + ":" + todayStr + ":account:max";
+        String overallOnlinetotalAvgKey = "monline:" + game_abbr + ":" + system + ":" + todayStr + ":account:avg";
+        String overallOnlinetotalSumKey = "monline:" + game_abbr + ":" + system + ":" + todayStr + ":account:sum";
+        String overallOnlinetotalCountKey = "monline:" + game_abbr + ":" + system + ":" + todayStr + ":account:count";
+        String overallOnlineMinuteKey = "monline:" + game_abbr + ":" + system + ":" + todayMinuteStr + ":account:incr";
+
+        //记录本分钟的所有平台/区服在线数
+        Long overallOnlineMinuteAccounts = !_jedis.exists(overallOnlineMinuteKey) ? 0L :
+                Integer.parseInt(_jedis.get(overallOnlineMinuteKey));
+        overallOnlineMinuteAccounts += online_acc;
+        _jedis.set(overallOnlineMinuteKey, overallOnlineMinuteAccounts.toString());
+        _jedis.expire(overallOnlineMinuteKey, 24 * 60 * 60);
+
+        //获取上一分钟所有平台/区服在线数
+        Long todayLastMinuteDate = "0000".equals(curHourMinute) ? todayMinuteDate : todayMinuteDate - 60;
+        String todayLastMinuteStr = date.timestamp2str(todayLastMinuteDate, "yyyyMMdd-HHmm");
+        String overallOnlineLastMinuteKey = "monline:" + game_abbr + ":" + system + ":" + todayLastMinuteStr +
+                ":account:incr";
+        Long overallOnlineLastMinuteAccounts = !_jedis.exists(overallOnlineLastMinuteKey) ? 0L :
+                Integer.parseInt(_jedis.get(overallOnlineLastMinuteKey));
+
+        //当天已记录的最高在线
+        overallMaxOnline = !_jedis.exists(overallOnlinetotalMaxKey) ? 0L :
+                Integer.parseInt(_jedis.get(overallOnlinetotalMaxKey));
+
+        //比较
+        overallMaxOnline = (overallMaxOnline >= overallOnlineLastMinuteAccounts ?
+                overallMaxOnline : overallOnlineLastMinuteAccounts);
+        _jedis.set(overallOnlinetotalMaxKey, overallMaxOnline.toString());
+        _jedis.expire(overallOnlinetotalMaxKey, 24 * 60 * 60);
+
+        //Long overallSumOnline = !_jedis.exists(overallOnlinetotalSumKey) ? 0L :
+        //        Integer.parseInt(_jedis.get(overallOnlinetotalSumKey));
+        //overallSumOnline += online_acc;
+        Long overallSumOnline = _jedis.incrBy(overallOnlinetotalSumKey, online_acc);
+        _jedis.expire(overallOnlinetotalSumKey, 24 * 60 * 60);
+        //Long overallCountOnline = !_jedis.exists(overallOnlinetotalCountKey) ? 0L :
+        //        Integer.parseInt(_jedis.get(overallOnlinetotalCountKey));
+        //overallCountOnline++;
+        Long overallCountOnline = _jedis.incr(overallOnlinetotalCountKey);
+        _jedis.expire(overallOnlinetotalCountKey, 24 * 60 * 60);
+
+        overallAvgOnline = Math.round(overallSumOnline / overallCountOnline);
+        _jedis.set(overallOnlinetotalAvgKey, overallAvgOnline.toString());
+        _jedis.expire(overallOnlinetotalAvgKey, 24 * 60 * 60);
+
+        inssql_overalldatadaily = String.format("INSERT INTO overalldatadaily (client, platform, date, maxonline," +
+                        "avgonline) VALUES (%d, '%s', %d, %d, %d) ON DUPLICATE KEY UPDATE maxonline=%d, avgonline=%d;",
+                client, platform_id, todayDate, overallMaxOnline, overallAvgOnline, overallMaxOnline,
+                overallAvgOnline);
+
+
+
+
         String inssql_onlineht = String.format("INSERT INTO onlineht (client, platform, server, date, version, max, min," +
-                "avg) VALUES (%d, %s, %s, %d, %s, %d, %d, %d) ON DUPLICATE KEY UPDATE max=%d, min=%d, avg=%d;", client,
-                platform_id, server_id, todayDate, "", MaxOnline, MinOnline, AvgOnline, MaxOnline, MinOnline, AvgOnline);
+                "avg) VALUES (%d, '%s', '%s', %d, '%s', %d, %d, %d) ON DUPLICATE KEY UPDATE max=%d, min=%d, avg=%d;",
+                client, platform_id, server_id, todayDate, "", MaxOnline, MinOnline, AvgOnline, MaxOnline, MinOnline,
+                AvgOnline);
 
-        String sql = dmlsql_newonlinert_tb;
-        sql += inssql_newonlinert;
-        sql += inssql_overalldatadaily;
-        sql += inssql_onlineht;
+        String sqls = dmlsql_newonlinert_tb;
+        sqls += inssql_newonlinert;
+        sqls += inssql_overalldatadaily;
+        sqls += inssql_onlineht;
 
-System.out.println(sql);
-        boolean sql_ret = false;
-        try {
-            sql_ret = _dbconnect.DirectUpdateBatch(game_abbr, sql);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        //flush to mysql
+        String mysql_host = _prop.getProperty("game." + game_abbr + ".mysql_host");
+        String mysql_port = _prop.getProperty("game." + game_abbr + ".mysql_port");
+        String mysql_db = _prop.getProperty("game." + game_abbr + ".mysql_db");
+        String mysql_user = _prop.getProperty("game." + game_abbr + ".mysql_user");
+        String mysql_passwd= _prop.getProperty("game." + game_abbr + ".mysql_passwd");
+
+        if (mysql.getConnection(game_abbr, mysql_host, mysql_port, mysql_db, mysql_user, mysql_passwd)
+                && _dbFlushTimer.ifItsTime2FlushDb(client.toString()+platform_id+server_id)) {
+            boolean sql_ret = false;
+            try {
+                sql_ret = _dbconnect.DirectUpdateBatch(game_abbr, sqls);
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
 System.out.println("|||||-----batch update result: " + sql_ret);
-
+        }
     }
 
     public void declareOutputFields(OutputFieldsDeclarer declarer) {

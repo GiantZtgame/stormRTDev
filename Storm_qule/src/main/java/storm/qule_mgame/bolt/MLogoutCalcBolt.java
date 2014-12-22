@@ -23,6 +23,7 @@ public class MLogoutCalcBolt extends BaseBasicBolt {
     private static mysql _dbconnect = null;
 
     private static timerCfgLoader _gamecfgLoader = new timerCfgLoader();
+    private static timerFlushDb _dbFlushTimer = new timerFlushDb();
     private static cfgLoader _cfgLoader = new cfgLoader();
     private static String _gamecfg;
 
@@ -39,7 +40,7 @@ public class MLogoutCalcBolt extends BaseBasicBolt {
             _gamecfg = "/config/test.games.properties";
         }
         _prop = _cfgLoader.loadConfig(_gamecfg, isOnline);
-        _jedis = new jedisUtil().getJedis(_prop.getProperty("redis.host"), Integer.parseInt(_prop.getProperty("redis.port")));
+        _jedis = new jedisUtil().getJedis(_prop.getProperty("redis.host"), Integer.parseInt(_prop.getProperty("redis.port")), 11);
 
         _dbconnect = new mysql();
 
@@ -73,35 +74,35 @@ public class MLogoutCalcBolt extends BaseBasicBolt {
         //根据用户登录列表信息获取用户系统、版本号信息
         String system = "";
         String appver = "";
-//        String model = "";
-//        String resolution = "";
-//        String operator = "";
-//        String network = "";
-//        String clientip = "";
-//        String district = "";
-//        String osver = "";
-//        String osbuilder = "";
-//        String devtype = "";
+        String model = "";
+        String resolution = "";
+        String sp = "";
+        String network = "";
+        String client_ip = "";
+        String district = "";
+        String osver = "";
+        String osbuilder = "";
+        String devtype = "";
 
         String mloginListKey = "mlogin:" + game_abbr + ":" + platform_id + ":" + server_id + ":" + uname + ":record";
         List mloginListLatest = _jedis.lrange(mloginListKey, -1, -1);       //获取最近登陆信息
         if (!mloginListLatest.isEmpty()) {
             String mloginLatestDetailKey = mloginListLatest.get(0).toString();
-            List<String> mloginLatestDetail = _jedis.hmget(mloginLatestDetailKey, "os", "appver"/*, "devid", "model", "resolution",
-                    "operator", "network", "clientip", "district", "osver", "osbuilder", "devtype"*/);
+            List<String> mloginLatestDetail = _jedis.hmget(mloginLatestDetailKey, "os", "appver", "devid", "model", "resolution",
+                    "operator", "network", "clientip", "district", "osver", "osbuilder", "devtype");
             if (!mloginLatestDetail.isEmpty()) {
                 system = mloginLatestDetail.get(0);
                 appver = mloginLatestDetail.get(1);
-                //devid = mloginLatestDetail.get(2);
-//                model = mloginLatestDetail.get(3);
-//                resolution = mloginLatestDetail.get(4);
-//                operator = mloginLatestDetail.get(5);
-//                network = mloginLatestDetail.get(6);
-//                clientip = mloginLatestDetail.get(7);
-//                district = mloginLatestDetail.get(8);
-//                osver = mloginLatestDetail.get(9);
-//                osbuilder = mloginLatestDetail.get(10);
-//                devtype = mloginLatestDetail.get(11);
+                devid = mloginLatestDetail.get(2);
+                model = mloginLatestDetail.get(3);
+                resolution = mloginLatestDetail.get(4);
+                sp = mloginLatestDetail.get(5);
+                network = mloginLatestDetail.get(6);
+                client_ip = mloginLatestDetail.get(7);
+                district = mloginLatestDetail.get(8);
+                osver = mloginLatestDetail.get(9);
+                osbuilder = mloginLatestDetail.get(10);
+                devtype = mloginLatestDetail.get(11);
             }
         }
 
@@ -113,12 +114,14 @@ public class MLogoutCalcBolt extends BaseBasicBolt {
                 todayStr + ":" + appver + ":oltime:acc:incr";
 
         Long moltimeAcc = _jedis.incrBy(moltimeAccKey, oltime_int);
+        _jedis.expire(moltimeAccKey, 60 * 24 * 60 * 60);
 
         //当天各时段使用总时长
         String moltimeHourlyAccKey = "moltime:" + game_abbr + ":" + system + ":" + platform_id + ":" + server_id + ":" +
                 todayHourStr + ":" + appver + ":oltime:acc:incr";
 
         Long moltimeHourlyAcc = _jedis.incrBy(moltimeHourlyAccKey, oltime_int);
+        _jedis.expire(moltimeHourlyAccKey, 60 * 24 * 60 * 60);
 
 
         String moltimeNewaccKey = "moltime:" + game_abbr + ":" + system + ":" + platform_id + ":" + server_id + ":" +
@@ -154,6 +157,7 @@ public class MLogoutCalcBolt extends BaseBasicBolt {
             String perNewaccOltimeKey = "moltime:" + game_abbr + ":" + system + ":" + platform_id + ":" + server_id + ":" +
                     todayStr + ":" + appver + ":" + uname + ":newacc_lasttime_perday:incr";
             Long thisNewAccOltime =  _jedis.incrBy(perNewaccOltimeKey, oltime_int);
+            _jedis.expire(perNewaccOltimeKey, 60 * 24 * 60 * 60);
 
             String perNewaccOltimeDistKey = "";
             for (Integer i=1 ; i<=9 ; i++) {
@@ -225,11 +229,13 @@ public class MLogoutCalcBolt extends BaseBasicBolt {
             }
             if (0 != segmentid) {
                 _jedis.sadd(pertimeNewaccOltimeDistFormerKey + segmentid.toString() + pertimeNewaccOltimeDistLatterKey, uname);
+                _jedis.expire(pertimeNewaccOltimeDistFormerKey + segmentid.toString() + pertimeNewaccOltimeDistLatterKey,
+                        60 * 24 * 60 * 60);
             }
 
 
-
             moltimeNewacc = _jedis.incrBy(moltimeNewaccKey, oltime_int);
+            _jedis.expire(moltimeNewaccKey, 60 * 24 * 60 * 60);
             ifNew = true;
         }
 
@@ -256,6 +262,7 @@ public class MLogoutCalcBolt extends BaseBasicBolt {
             String perDauOltimeKey = "moltime:" + game_abbr + ":" + system + ":" + platform_id + ":" + server_id + ":" +
                     todayStr + ":" + appver + ":" + uname + ":dau_lasttime_perday:incr";
             Long thisDauOltime =  _jedis.incrBy(perDauOltimeKey, oltime_int);
+            _jedis.expire(perDauOltimeKey, 60 * 24 * 60 * 60);
 
             String perDauOltimeDistKey = "";
             for (Integer i=1 ; i<=9 ; i++) {
@@ -287,6 +294,8 @@ public class MLogoutCalcBolt extends BaseBasicBolt {
             }
             if (0 != segmentid) {
                 _jedis.sadd(perDauOltimeDistFormerKey + segmentid.toString() + perDauOltimeDistLatterKey, uname);
+                _jedis.expire(perDauOltimeDistFormerKey + segmentid.toString() + perDauOltimeDistLatterKey,
+                        60 * 24 * 60 * 60);
             }
 
 
@@ -327,10 +336,13 @@ public class MLogoutCalcBolt extends BaseBasicBolt {
             }
             if (0 != segmentid) {
                 _jedis.sadd(pertimeDauOltimeDistFormerKey + segmentid.toString() + pertimeDauOltimeDistLatterKey, uname);
+                _jedis.expire(pertimeDauOltimeDistFormerKey + segmentid.toString() + pertimeDauOltimeDistLatterKey,
+                        60 * 24 * 60 * 60);
             }
 
 
             moltimeDau = _jedis.incrBy(moltimeDauKey, oltime_int);
+            _jedis.expire(moltimeDauKey, 60 * 24 * 60 * 60);
             ifDau = true;
         }
 
@@ -356,6 +368,7 @@ public class MLogoutCalcBolt extends BaseBasicBolt {
             String perRechOltimeKey = "moltime:" + game_abbr + ":" + system + ":" + platform_id + ":" + server_id + ":" +
                     todayStr + ":" + appver + ":" + uname + ":rechargers_lasttime_perday:incr";
             Long thisRechargerOltime =  _jedis.incrBy(perRechOltimeKey, oltime_int);
+            _jedis.expire(perRechOltimeKey, 60 * 24 * 60 * 60);
 
             String perRechargerOltimeDistKey = "";
             for (Integer i=1 ; i<=9 ; i++) {
@@ -387,6 +400,8 @@ public class MLogoutCalcBolt extends BaseBasicBolt {
             }
             if (0 != segmentid) {
                 _jedis.sadd(perRechargerOltimeDistFormerKey + segmentid.toString() + perRechargerOltimeDistLatterKey, uname);
+                _jedis.expire(perRechargerOltimeDistFormerKey + segmentid.toString() + perRechargerOltimeDistLatterKey,
+                        60 * 24 * 60 * 60);
             }
 
 
@@ -427,10 +442,13 @@ public class MLogoutCalcBolt extends BaseBasicBolt {
             }
             if (0 != segmentid) {
                 _jedis.sadd(pertimeRechOltimeDistFormerKey + segmentid.toString() + pertimeRechOltimeDistLatterKey, uname);
+                _jedis.expire(pertimeRechOltimeDistFormerKey + segmentid.toString() + pertimeRechOltimeDistLatterKey,
+                        60 * 24 * 60 * 60);
             }
 
 
             moltimeRech = _jedis.incrBy(moltimeRechKey, oltime_int);
+            _jedis.expire(moltimeRechKey, 60 * 24 * 60 * 60);
             ifRech = true;
         }
 
@@ -441,6 +459,16 @@ public class MLogoutCalcBolt extends BaseBasicBolt {
 
 
 
+
+        //flush to mlogout daily list
+        String mlogoutDailyListKey = "mlogout:" + game_abbr + ":" + todayDate + ":record";
+        String mlogoutDailyListValue = logout_datetime + ":" + client + ":" + platform_id + ":" + server_id + ":" +
+                appver + ":" + uname + ":" + cname + ":" + devid + ":" + system  + ":" + model + ":" + resolution + ":"
+                + sp + ":" + network + ":" + client_ip + ":" + district + ":" + osver + ":" + osbuilder + ":"
+                + devtype + ":" + oltime;
+        _jedis.rpush(mlogoutDailyListKey, mlogoutDailyListValue);
+
+
         //flush to mysql
         String mysql_host = _prop.getProperty("game." + game_abbr + ".mysql_host");
         String mysql_port = _prop.getProperty("game." + game_abbr + ".mysql_port");
@@ -448,15 +476,16 @@ public class MLogoutCalcBolt extends BaseBasicBolt {
         String mysql_user = _prop.getProperty("game." + game_abbr + ".mysql_user");
         String mysql_passwd= _prop.getProperty("game." + game_abbr + ".mysql_passwd");
 
-        if (mysql.getConnection(game_abbr, mysql_host, mysql_port, mysql_db, mysql_user, mysql_passwd)) {
+        if (mysql.getConnection(game_abbr, mysql_host, mysql_port, mysql_db, mysql_user, mysql_passwd)
+                && _dbFlushTimer.ifItsTime2FlushDb(client.toString()+platform_id+server_id+appver)) {
             boolean sql_ret = false;
             String sqls = "";
 
             String inssql_su_participation_daily = String.format("INSERT INTO su_participation_daily (client, platform," +
                     "server, date, version, avg_lasttime_newacc, avg_lasttime_dau, avg_lasttime_rechargers) VALUES (%d," +
-                    "%s, %s, %d, %s, %d, %d, %d) ON DUPLICATE KEY UPDATE avg_lasttime_newacc=%d, avg_lasttime_dau=%d," +
-                    "avg_lasttime_rechargers=%d;", client, platform_id, server_id, todayDate, appver,
-                    avg_lasttime_newacc, avg_lasttime_dau, avg_lasttime_rechargers, avg_lasttime_newacc,
+                    "'%s', '%s', %d, '%s', %d, %d, %d) ON DUPLICATE KEY UPDATE avg_lasttime_newacc=%d, " +
+                    "avg_lasttime_dau=%d, avg_lasttime_rechargers=%d;", client, platform_id, server_id, todayDate,
+                    appver, avg_lasttime_newacc, avg_lasttime_dau, avg_lasttime_rechargers, avg_lasttime_newacc,
                     avg_lasttime_dau, avg_lasttime_rechargers);
 
 
@@ -533,7 +562,7 @@ public class MLogoutCalcBolt extends BaseBasicBolt {
             }
 
             String inssql_signinlogindaily = String.format("INSERT INTO signinlogindaily (client, platform, server, " +
-                    "date, version, lasttime) VALUES (%d, %s, %s, %d, %s, %d) ON DUPLICATE KEY UPDATE lasttime=%d;",
+                    "date, version, lasttime) VALUES (%d, '%s', '%s', %d, '%s', %d) ON DUPLICATE KEY UPDATE lasttime=%d;",
                     client, platform_id, server_id, todayDate, appver, moltimeAcc, moltimeAcc);
             String signinloginhourly_tb = "signinloginhourly_" + todayStr;
             String dmlsql_signinloginhourly_tb = String.format("CREATE TABLE IF NOT EXISTS %s (" +
@@ -541,7 +570,7 @@ public class MLogoutCalcBolt extends BaseBasicBolt {
                     "`client` tinyint(3) unsigned NOT NULL," +
                     "`platform` mediumint(5) unsigned NOT NULL," +
                     "`server` mediumint(5) unsigned NOT NULL," +
-                    "`hour` tiny(3) unsigned NOT NULL," +
+                    "`hour` tinyint(3) unsigned NOT NULL," +
                     "`version` char(10) CHARACTER SET UTF8 NOT NULL," +
                     "`newdev` int(11) unsigned NOT NULL DEFAULT 0," +
                     "`newacc` int(11) unsigned NOT NULL DEFAULT 0," +
@@ -553,7 +582,7 @@ public class MLogoutCalcBolt extends BaseBasicBolt {
                     "UNIQUE KEY `platform` (`client`, `platform`, `server`, `hour`, `version`)" +
                     ") ENGINE=MyISAM DEFAULT CHARSET=utf8;", signinloginhourly_tb);
             String inssql_signinloginhourly = String.format("INSERT INTO %s (client, platform, server, hour, version," +
-                    "lasttime) VALUES (%d, %s, %s, %s, %s, %d) ON DUPLICATE KEY UPDATE lasttime=%d;",
+                    "lasttime) VALUES (%d, '%s', '%s', '%s', '%s', %d) ON DUPLICATE KEY UPDATE lasttime=%d;",
                     signinloginhourly_tb, client, platform_id, server_id, curHour, appver, moltimeHourlyAcc,
                     moltimeHourlyAcc);
 

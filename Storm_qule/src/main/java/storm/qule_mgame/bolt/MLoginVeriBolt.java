@@ -75,9 +75,11 @@ public class MLoginVeriBolt extends BaseBasicBolt {
                 String token_gen = "";
                 try {
                     token_gen = new md5().gen_md5(raw_str);
+                    token_gen = token_gen.substring(5, 10);
                 } catch (NoSuchAlgorithmException e) {
                     e.printStackTrace();
                 }
+
                 if (token_gen.equals(token) && keywords.equals(LOG_SIGN)) {
                     collector.emit(new Values(game_abbr, platform_id, server_id, datetime, devid, uname, system, appver,
                             model, resolution, sp, network, client_ip, district, osver, osbuilder, devtype));

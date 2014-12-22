@@ -7,6 +7,7 @@ import backtype.storm.topology.base.BaseBasicBolt;
 import backtype.storm.tuple.Tuple;
 import redis.clients.jedis.Jedis;
 import storm.qule_util.*;
+import storm.qule_util.mgame.platform2ifabroad;
 import storm.qule_util.mgame.system2client;
 
 import java.sql.SQLException;
@@ -23,6 +24,7 @@ public class MLoginCalcBolt extends BaseBasicBolt {
     private static mysql _dbconnect = null;
 
     private static timerCfgLoader _gamecfgLoader = new timerCfgLoader();
+    private static timerFlushDb _dbFlushTimer = new timerFlushDb();
     private static cfgLoader _cfgLoader = new cfgLoader();
     private static String _gamecfg;
 
@@ -39,7 +41,7 @@ public class MLoginCalcBolt extends BaseBasicBolt {
             _gamecfg = "/config/test.games.properties";
         }
         _prop = _cfgLoader.loadConfig(_gamecfg, isOnline);
-        _jedis = new jedisUtil().getJedis(_prop.getProperty("redis.host"), Integer.parseInt(_prop.getProperty("redis.port")));
+        _jedis = new jedisUtil().getJedis(_prop.getProperty("redis.host"), Integer.parseInt(_prop.getProperty("redis.port")), 11);
 
         _dbconnect = new mysql();
 
@@ -79,6 +81,7 @@ public class MLoginCalcBolt extends BaseBasicBolt {
         Long todayMinuteDate = date.str2timestamp(todayMinuteStr, "yyyyMMdd-HHmm");
 
         Integer client = system2client.turnSystem2ClientId(system);
+        Integer ifAbroad = platform2ifabroad.turnPlatform2ifabroad(platform_id);
 
         boolean ifDau = false, ifRech = false;
 
@@ -106,6 +109,7 @@ public class MLoginCalcBolt extends BaseBasicBolt {
 
         //全局累计数据key
         String overallKey = "overalldata:" + game_abbr + ":" + system + ":" + platform_id + ":hash:incr";
+        String overallAbroadKey = "overalldata:" + game_abbr + ":" + system + ":" + ifAbroad + ":hash:incr";
 
 
         //1. 各系统所有登陆账号列表
@@ -121,6 +125,7 @@ public class MLoginCalcBolt extends BaseBasicBolt {
         String loginAccListDailyKey = "mlogin:" + game_abbr + ":" + system + ":" + platform_id + ":" + todayStr +
                 ":account:set";
         _jedis.sadd(loginAccListDailyKey, uname);
+        _jedis.expire(loginAccListDailyKey, 60 * 24 * 60 * 60);
 
         Long overalldatadaily_dau = _jedis.scard(loginAccListDailyKey);
 
@@ -131,6 +136,7 @@ public class MLoginCalcBolt extends BaseBasicBolt {
         String loginAccListDailyVerlyKey = "mlogin:" + game_abbr + ":" + system + ":" + platform_id + ":" + todayStr +
                 ":" + appver + ":account:set";
         _jedis.sadd(loginAccListDailyVerlyKey, uname);
+        _jedis.expire(loginAccListDailyVerlyKey, 60 * 24 * 60 * 60);
 
         Long overalldatadailyverly_dau = _jedis.scard(loginAccListDailyVerlyKey);
 
@@ -141,6 +147,7 @@ public class MLoginCalcBolt extends BaseBasicBolt {
         String loginAccListSvrDailyKey = "mlogin:" + game_abbr + ":" + system + ":" + platform_id + ":" + server_id +
                 ":" + todayStr + ":" + appver + ":account:set";
         _jedis.sadd(loginAccListSvrDailyKey, uname);
+        _jedis.expire(loginAccListSvrDailyKey, 60 * 24 * 60 * 60);
 
         Long signinlogindaily_logins = _jedis.scard(loginAccListSvrDailyKey);
 
@@ -149,6 +156,7 @@ public class MLoginCalcBolt extends BaseBasicBolt {
         String loginAccListSvrHourlyKey = "mlogin:" + game_abbr + ":" + system + ":" + platform_id + ":" + server_id +
                 ":" + todayHourStr + ":" + appver + ":account:set";
         _jedis.sadd(loginAccListSvrHourlyKey, uname);
+        _jedis.expire(loginAccListSvrHourlyKey, 60 * 24 * 60 * 60);
 
         Long signinloginhourly_logins = _jedis.scard(loginAccListSvrHourlyKey);
 
@@ -166,16 +174,20 @@ public class MLoginCalcBolt extends BaseBasicBolt {
         String loginAccListSvrMinlyNewKey = "mlogin:" + game_abbr + ":" + system + ":" + platform_id + ":" + server_id +
                 ":" + todayMinuteStr + ":" + appver + ":account:new:set";
         //12. 各系统当天所有新登账号列表
-        String loginAccListNewKey = "mlogin:" + game_abbr + ":" + system + ":" + platform_id + ":total:account:new:set";
+        String loginAccListNewKey = "mlogin:" + game_abbr + ":" + system + ":" + platform_id + ":" + todayStr + ":account:new:set";
         //14. 各系统当天各版本所有新登账号列表
         String loginAccListDailyVerlyNewKey = "mlogin:" + game_abbr + ":" + system + ":" + platform_id + ":" + todayStr +
                 ":" + appver + ":account:new:set";
         if (1L == _jedis.sadd(loginAccListSvrKey, uname)) {
             _jedis.sadd(loginAccListSvrNewKey, uname);
+            _jedis.expire(loginAccListSvrNewKey, 60 * 24 * 60 * 60);
             _jedis.sadd(loginAccListSvrHourlyNewKey, uname);
+            _jedis.expire(loginAccListSvrHourlyNewKey, 60 * 24 * 60 * 60);
             _jedis.sadd(loginAccListSvrMinlyNewKey, uname);
+            _jedis.expire(loginAccListSvrMinlyNewKey, 60 * 24 * 60 * 60);
             _jedis.sadd(loginAccListNewKey, uname);
             _jedis.sadd(loginAccListDailyVerlyNewKey, uname);
+            _jedis.expire(loginAccListDailyVerlyNewKey, 60 * 24 * 60 * 60);
 
             ifnew = 1;
         }
@@ -190,6 +202,7 @@ public class MLoginCalcBolt extends BaseBasicBolt {
         String loginAccListHourlyKey = "mlogin:" + game_abbr + ":" + system + ":" + platform_id + ":" + todayHourStr +
                 ":account:set";
         _jedis.sadd(loginAccListHourlyKey, uname);
+        _jedis.expire(loginAccListHourlyKey, 60 * 24 * 60 * 60);
 
         Long overalldatahourly_hau = _jedis.scard(loginAccListHourlyKey);
 
@@ -200,6 +213,7 @@ public class MLoginCalcBolt extends BaseBasicBolt {
                 ":" + todayStr + ":" + appver + ":rechargers:set";
         if (_jedis.exists(mrechargeListKey)) {
             _jedis.sadd(mloginRechListKey, uname);
+            _jedis.expire(mloginRechListKey, 60 * 24 * 60 * 60);
         }
 
 
@@ -223,10 +237,12 @@ public class MLoginCalcBolt extends BaseBasicBolt {
 
             if (_jedis.sismember(thisdayNewKey, uname)) {
                 _jedis.sadd(dailyremainNewKey, uname);
+                _jedis.expire(dailyremainNewKey, 60 * 24 * 60 * 60);
             }
 
             if (_jedis.sismember(thisdayLoginKey, uname)) {
                 _jedis.sadd(dailyremainAuKey, uname);
+                _jedis.expire(dailyremainAuKey, 60 * 24 * 60 * 60);
             }
 
             Integer dailyremainDay = day + 1;
@@ -236,9 +252,9 @@ public class MLoginCalcBolt extends BaseBasicBolt {
             Long thisdayNewRemain = !_jedis.exists(dailyremainNewKey) ? 0L : _jedis.scard(dailyremainNewKey);
             Long thisdayAuRemain = !_jedis.exists(dailyremainAuKey) ? 0L : _jedis.scard(dailyremainAuKey);
             String thisdaySql = String.format("INSERT INTO dailyremain (client, platform, server, date, version, %s, %s)" +
-                    " VALUES (%d, %s, %s, %d, %s, %d, %d) ON DUPLICATE KEY UPDATE %s=%d, %s=%d;", newColname, auColname,
-                    client, platform_id, server_id, thisdayTs, appver, thisdayNewRemain, thisdayAuRemain, newColname,
-                    thisdayNewRemain, auColname, thisdayAuRemain);
+                    " VALUES (%d, '%s', '%s', %d, '%s', %d, %d) ON DUPLICATE KEY UPDATE %s=%d, %s=%d;", newColname,
+                    auColname, client, platform_id, server_id, thisdayTs, appver, thisdayNewRemain, thisdayAuRemain,
+                    newColname, thisdayNewRemain, auColname, thisdayAuRemain);
             DailyremainSql += thisdaySql;
         }
 
@@ -349,9 +365,10 @@ public class MLoginCalcBolt extends BaseBasicBolt {
             _jedis.expire(mactived30NewKey, 7 * 24 * 60 * 60);
 
             inssql_mactivedaily = String.format("INSERT INTO activedaily (client, platform, server, date, version, wau," +
-                    "waunew, mau, maunew) VALUES (%d, %s, %s, %d, %s, %d, %d, %d, %d) ON DUPLICATE KEY UPDATE wau=%d," +
-                    "waunew=%d, mau=%d, maunew=%d;", client, platform_id, server_id, todayDate, appver, mactived7,
-                    mactived7new, mactived30, mactived30new, mactived7, mactived7new, mactived30, mactived30new);
+                    "waunew, mau, maunew) VALUES (%d, '%s', '%s', %d, '%s', %d, %d, %d, %d) ON DUPLICATE KEY UPDATE " +
+                    "wau=%d, waunew=%d, mau=%d, maunew=%d;", client, platform_id, server_id, todayDate, appver,
+                    mactived7, mactived7new, mactived30, mactived30new, mactived7, mactived7new, mactived30,
+                    mactived30new);
 
 
             //7日流失
@@ -368,8 +385,8 @@ public class MLoginCalcBolt extends BaseBasicBolt {
             _jedis.expire(lostListd7Key, 7 * 24 * 60 * 60);
 
             inssql_mlostretdaily = String.format("INSERT INTO lostretdaily (client, platform, server, date, version," +
-                    "lostd7) VALUES (%d, %s, %s, %d, %s, %d) ON DUPLICATE KEY UPDATE lostd7=%d;", client, platform_id,
-                    server_id, lostd7Date, appver, mlostd7, mlostd7);
+                    "lostd7) VALUES (%d, '%s', '%s', %d, '%s', %d) ON DUPLICATE KEY UPDATE lostd7=%d;", client,
+                    platform_id, server_id, lostd7Date, appver, mlostd7, mlostd7);
 
             //14日流失
             Long lostd14Date = todayDate - 15 * 24 * 60 * 60;
@@ -385,8 +402,8 @@ public class MLoginCalcBolt extends BaseBasicBolt {
             _jedis.expire(lostListd14Key, 7 * 24 * 60 * 60);
 
             inssql_mlostretdaily += String.format("INSERT INTO lostretdaily (client, platform, server, date, version," +
-                    "lostd14) VALUES (%d, %s, %s, %d, %s, %d) ON DUPLICATE KEY UPDATE lostd14=%d;", client, platform_id,
-                    server_id, lostd14Date, appver, mlostd14, mlostd14);
+                    "lostd14) VALUES (%d, '%s', '%s', %d, '%s', %d) ON DUPLICATE KEY UPDATE lostd14=%d;", client,
+                    platform_id, server_id, lostd14Date, appver, mlostd14, mlostd14);
 
             //30日流失
             Long lostd30Date = todayDate - 31 * 24 * 60 * 60;
@@ -402,8 +419,8 @@ public class MLoginCalcBolt extends BaseBasicBolt {
             _jedis.expire(lostListd30Key, 7 * 24 * 60 * 60);
 
             inssql_mlostretdaily += String.format("INSERT INTO lostretdaily (client, platform, server, date, version," +
-                    "lostd30) VALUES (%d, %s, %s, %d, %s, %d) ON DUPLICATE KEY UPDATE lostd30=%d;", client, platform_id,
-                    server_id, lostd14Date, appver, mlostd30, mlostd30);
+                    "lostd30) VALUES (%d, '%s', '%s', %d, '%s', %d) ON DUPLICATE KEY UPDATE lostd30=%d;", client,
+                    platform_id, server_id, lostd14Date, appver, mlostd30, mlostd30);
         }
 
 
@@ -420,6 +437,7 @@ public class MLoginCalcBolt extends BaseBasicBolt {
                 todayStr + ":" + appver + ":dau:d7:set";
         if (_jedis.sismember(loginAccListSvrretDay7Key, uname) && !_jedis.sismember(mactived7Key, uname)) {
             _jedis.sadd(retListd7DauKey, uname);
+            _jedis.expire(retListd7DauKey, 60 * 24 * 60 * 60);
         }
         Long retListd7Dau = !_jedis.exists(retListd7DauKey) ? 0L : _jedis.scard(retListd7DauKey);
 
@@ -429,6 +447,7 @@ public class MLoginCalcBolt extends BaseBasicBolt {
         if (_jedis.exists(rechKey) && _jedis.sismember(loginAccListSvrretDay7Key, uname) &&
                 !_jedis.sismember(mactived7Key, uname)) {
             _jedis.sadd(retListd7RechKey, uname);
+            _jedis.expire(retListd7RechKey, 60 * 24 * 60 * 60);
         }
         Long retListd7Rech = !_jedis.exists(retListd7RechKey) ? 0L : _jedis.scard(retListd7RechKey);
 
@@ -441,6 +460,7 @@ public class MLoginCalcBolt extends BaseBasicBolt {
                 todayStr + ":" + appver + ":dau:d14:set";
         if (_jedis.sismember(loginAccListSvrretDay14Key, uname) && !_jedis.sismember(mactived14Key, uname)) {
             _jedis.sadd(retListd14DauKey, uname);
+            _jedis.expire(retListd14DauKey, 60 * 24 * 60 * 60);
         }
         Long retListd14Dau = !_jedis.exists(retListd14DauKey) ? 0L : _jedis.scard(retListd14DauKey);
 
@@ -450,6 +470,7 @@ public class MLoginCalcBolt extends BaseBasicBolt {
         if (_jedis.exists(rechKey) && _jedis.sismember(loginAccListSvrretDay14Key, uname) &&
                 !_jedis.sismember(mactived14Key, uname)) {
             _jedis.sadd(retListd14RechKey, uname);
+            _jedis.expire(retListd14RechKey, 60 * 24 * 60 * 60);
         }
         Long retListd14Rech = !_jedis.exists(retListd14RechKey) ? 0L : _jedis.scard(retListd7RechKey);
 
@@ -462,6 +483,7 @@ public class MLoginCalcBolt extends BaseBasicBolt {
                 todayStr + ":" + appver + ":dau:d30:set";
         if (_jedis.sismember(loginAccListSvrretDay30Key, uname) && !_jedis.sismember(mactived30Key, uname)) {
             _jedis.sadd(retListd30DauKey, uname);
+            _jedis.expire(retListd30DauKey, 60 * 24 * 60 * 60);
         }
         Long retListd30Dau = !_jedis.exists(retListd30DauKey) ? 0L : _jedis.scard(retListd30DauKey);
 
@@ -471,6 +493,7 @@ public class MLoginCalcBolt extends BaseBasicBolt {
         if (_jedis.exists(rechKey) && _jedis.sismember(loginAccListSvrretDay30Key, uname) &&
                 !_jedis.sismember(mactived30Key, uname)) {
             _jedis.sadd(retListd30RechKey, uname);
+            _jedis.expire(retListd30RechKey, 60 * 24 * 60 * 60);
         }
         Long retListd30Rech = !_jedis.exists(retListd30RechKey) ? 0L : _jedis.scard(retListd30RechKey);
 
@@ -496,12 +519,14 @@ public class MLoginCalcBolt extends BaseBasicBolt {
 
         if (_jedis.sismember(loginAccListSvrNewKey, uname)) {
             mlogintimesNewacc = _jedis.incr(mlogintimesNewaccKey);
+            _jedis.expire(mlogintimesNewaccKey, 60 * 24 * 60 * 60);
 
 
             //新用户对应游戏次数
             String perNewaccLogintimesKey = "moltime:" + game_abbr + ":" + system + ":" + platform_id + ":" + server_id + ":" +
                     todayStr + ":" + appver + ":" + uname + ":newacc_logintimes_perday:incr";
             Long thisNewAccLogintimes = _jedis.incr(perNewaccLogintimesKey);
+            _jedis.expire(perNewaccLogintimesKey, 60 * 24 * 60 * 60);
 
             String perNewaccLogintimesDistKey = "";
             for (Integer i=1 ; i<=7 ; i++) {
@@ -531,6 +556,8 @@ public class MLoginCalcBolt extends BaseBasicBolt {
             if (0 != segmentid) {
                 _jedis.sadd(perNewaccLogintimesDistFormerKey + segmentid.toString() + perNewaccLogintimesDistLatterKey,
                         uname);
+                _jedis.expire(perNewaccLogintimesDistFormerKey + segmentid.toString() + perNewaccLogintimesDistLatterKey,
+                        60 * 24 * 60 * 60);
             }
 
         }
@@ -541,12 +568,14 @@ public class MLoginCalcBolt extends BaseBasicBolt {
 
         if (_jedis.sismember(loginAccListSvrKey, uname)) {
             mlogintimesDau = _jedis.incr(mlogintimesDauKey);
+            _jedis.expire(mlogintimesDauKey, 60 * 24 * 60 * 60);
 
 
             //活跃用户对应游戏次数
             String perDauLogintimesKey = "moltime:" + game_abbr + ":" + system + ":" + platform_id + ":" + server_id + ":" +
                     todayStr + ":" + appver + ":" + uname + ":dau_logintimes_perday:incr";
             Long thisDauLogintimes =  _jedis.incr(perDauLogintimesKey);
+            _jedis.expire(perDauLogintimesKey, 60 * 24 * 60 * 60);
 
             String perDauLogintimesDistKey = "";
             for (Integer i=1 ; i<=7 ; i++) {
@@ -576,6 +605,8 @@ public class MLoginCalcBolt extends BaseBasicBolt {
             if (0 != segmentid) {
                 _jedis.sadd(perDauLogintimesDistFormerKey + segmentid.toString() + perDauLogintimesDistLatterKey,
                         uname);
+                _jedis.expire(perDauLogintimesDistFormerKey + segmentid.toString() + perDauLogintimesDistLatterKey,
+                        60 * 24 * 60 * 60);
             }
 
             ifDau = true;
@@ -587,12 +618,14 @@ public class MLoginCalcBolt extends BaseBasicBolt {
 
         if (_jedis.sismember(mrechargeListKey, uname)) {
             mlogintimesRech = _jedis.incr(mlogintimesRechKey);
+            _jedis.expire(mlogintimesRechKey, 60 * 24 * 60 * 60);
 
 
             //充值用户对应游戏次数
             String perRechLogintimesKey = "moltime:" + game_abbr + ":" + system + ":" + platform_id + ":" + server_id + ":" +
                     todayStr + ":" + appver + ":" + uname + ":rechargers_logintimes_perday:incr";
             Long thisRechLogintimes =  _jedis.incr(perRechLogintimesKey);
+            _jedis.expire(perRechLogintimesKey, 60 * 24 * 60 * 60);
 
             String perRechLogintimesDistKey = "";
             for (Integer i=1 ; i<=7 ; i++) {
@@ -622,6 +655,8 @@ public class MLoginCalcBolt extends BaseBasicBolt {
             if (0 != segmentid) {
                 _jedis.sadd(perRechLogintimesDistFormerKey + segmentid.toString() + perRechLogintimesDistLatterKey,
                         uname);
+                _jedis.expire(perRechLogintimesDistFormerKey + segmentid.toString() + perRechLogintimesDistLatterKey,
+                        60 * 24 * 60 * 60);
             }
 
             ifRech = true;
@@ -639,6 +674,17 @@ public class MLoginCalcBolt extends BaseBasicBolt {
 
 
 
+        //flush to mlogin daily list
+        String mloginDailyListKey = "mlogin:" + game_abbr + ":" + todayDate + ":record";
+        String mloginDailyListValue = login_datetime + ":" + client + ":" + platform_id + ":" + server_id +
+                ":" + appver + ":" + uname + ":" + system  + ":" + model + ":" + resolution + ":" + sp + ":" + network +
+                ":" + client_ip + ":" + district + ":" + osver + ":" + osbuilder + ":" + devtype + ":" +
+                ifnew.toString() + ":" + (ifRech?"1":"0");
+        _jedis.rpush(mloginDailyListKey, mloginDailyListValue);
+
+
+
+
 
         //flush to mysql
         String mysql_host = _prop.getProperty("game." + game_abbr + ".mysql_host");
@@ -647,16 +693,17 @@ public class MLoginCalcBolt extends BaseBasicBolt {
         String mysql_user = _prop.getProperty("game." + game_abbr + ".mysql_user");
         String mysql_passwd= _prop.getProperty("game." + game_abbr + ".mysql_passwd");
 
-        if (mysql.getConnection(game_abbr, mysql_host, mysql_port, mysql_db, mysql_user, mysql_passwd)) {
+        if (mysql.getConnection(game_abbr, mysql_host, mysql_port, mysql_db, mysql_user, mysql_passwd)
+                && _dbFlushTimer.ifItsTime2FlushDb(client.toString()+platform_id+server_id+appver)) {
             boolean sql_ret = false;
             String sqls = "";
 
             String inssql_overalldata = String.format("INSERT INTO overalldata (client, platform, accounts)" +
-                            " VALUES (%d, %s, %d) ON DUPLICATE KEY UPDATE accounts=%d;", client, platform_id,
+                            " VALUES (%d, '%s', %d) ON DUPLICATE KEY UPDATE accounts=%d;", client, platform_id,
                     overalldata_accounts, overalldata_accounts);
 
             String inssql_overalldatadaily = String.format("INSERT INTO overalldatadaily (client, platform, date, dau," +
-                            "daunew) VALUES (%d, %s, %d, %d, %d) ON DUPLICATE KEY UPDATE dau=%d, daunew=%d;", client,
+                            "daunew) VALUES (%d, '%s', %d, %d, %d) ON DUPLICATE KEY UPDATE dau=%d, daunew=%d;", client,
                     platform_id, todayDate, overalldatadaily_dau, overalldatadaily_daunew, overalldatadaily_dau,
                     overalldatadaily_daunew);
 
@@ -665,7 +712,7 @@ public class MLoginCalcBolt extends BaseBasicBolt {
                     "`id` int(11) unsigned NOT NULL AUTO_INCREMENT," +
                     "`client` tinyint(3) unsigned NOT NULL," +
                     "`platform` mediumint(5) unsigned NOT NULL," +
-                    "`hour` tiny(3) unsigned NOT NULL," +
+                    "`hour` tinyint(3) unsigned NOT NULL," +
                     "`hau` int(11) unsigned NOT NULL DEFAULT 0," +
                     "`maxonline` int(11) unsigned NOT NULL DEFAULT 0," +
                     "`launchdev` int(11) unsigned NOT NULL DEFAULT 0," +
@@ -673,16 +720,16 @@ public class MLoginCalcBolt extends BaseBasicBolt {
                     "UNIQUE KEY `platform` (`client`, `platform`, `hour`)" +
                     ") ENGINE=MyISAM DEFAULT CHARSET=utf8;", overalldatahourly_tb);
             String inssql_overalldatahourly = String.format("INSERT INTO %s (client, platform, hour, hau) VALUES (" +
-                    "%d, %s, %s, %d) ON DUPLICATE KEY UPDATE hau=%d;", overalldatahourly_tb, client, platform_id, curHour,
-                    overalldatahourly_hau, overalldatahourly_hau);
+                    "%d, '%s', '%s', %d) ON DUPLICATE KEY UPDATE hau=%d;", overalldatahourly_tb, client, platform_id,
+                    curHour, overalldatahourly_hau, overalldatahourly_hau);
 
             String inssql_overalldatadailyverly = String.format("INSERT INTO overalldatadailyverly (client, platform, " +
-                            "date, version, dau, daunew) VALUES (%d, %s, %d, %s, %d, %d) ON DUPLICATE KEY UPDATE dau=%d," +
-                            "daunew=%d;", client, platform_id, todayDate, appver, overalldatadailyverly_dau, overalldatadailyverly_daunew,
-                    overalldatadailyverly_dau, overalldatadailyverly_daunew);
+                            "date, version, dau, daunew) VALUES (%d, '%s', %d, '%s', %d, %d) ON DUPLICATE KEY UPDATE " +
+                            "dau=%d, daunew=%d;", client, platform_id, todayDate, appver, overalldatadailyverly_dau,
+                    overalldatadailyverly_daunew, overalldatadailyverly_dau, overalldatadailyverly_daunew);
 
             String inssql_signinlogindaily = String.format("INSERT INTO signinlogindaily (client, platform, server, date," +
-                            "version, newacc, logins) VALUES (%d, %s, %s, %d, %s, %d, %d) ON DUPLICATE KEY UPDATE" +
+                            "version, newacc, logins) VALUES (%d, '%s', '%s', %d, '%s', %d, %d) ON DUPLICATE KEY UPDATE" +
                             " newacc=%d, logins=%d;", client, platform_id, server_id, todayDate, appver,
                     signinlogindaily_newacc, signinlogindaily_logins, signinlogindaily_newacc, signinlogindaily_logins);
 
@@ -692,7 +739,7 @@ public class MLoginCalcBolt extends BaseBasicBolt {
                     "`client` tinyint(3) unsigned NOT NULL," +
                     "`platform` mediumint(5) unsigned NOT NULL," +
                     "`server` mediumint(5) unsigned NOT NULL," +
-                    "`hour` tiny(3) unsigned NOT NULL," +
+                    "`hour` tinyint(3) unsigned NOT NULL," +
                     "`version` char(10) CHARACTER SET UTF8 NOT NULL," +
                     "`newdev` int(11) unsigned NOT NULL DEFAULT 0," +
                     "`newacc` int(11) unsigned NOT NULL DEFAULT 0," +
@@ -704,7 +751,7 @@ public class MLoginCalcBolt extends BaseBasicBolt {
                     "UNIQUE KEY `platform` (`client`, `platform`, `server`, `hour`, `version`)" +
                     ") ENGINE=MyISAM DEFAULT CHARSET=utf8;", signinloginhourly_tb);
             String inssql_signinloginhourly = String.format("INSERT INTO %s (client, platform, server, hour, version," +
-                            "newacc, logins) VALUES (%d, %s, %s, %s, %s, %d, %d) ON DUPLICATE KEY UPDATE " +
+                            "newacc, logins) VALUES (%d, '%s', '%s', '%s', '%s', %d, %d) ON DUPLICATE KEY UPDATE " +
                             "newacc=%d, logins=%d;", signinloginhourly_tb, client, platform_id, server_id, curHour,
                     appver, signinloginhourly_newacc, signinloginhourly_logins, signinloginhourly_newacc,
                     signinloginhourly_logins);
@@ -730,14 +777,15 @@ public class MLoginCalcBolt extends BaseBasicBolt {
                     "`osbuilder` char(64) CHARACTER SET UTF8 NOT NULL DEFAULT ''," +
                     "`devtype` char(64) CHARACTER SET UTF8 NOT NULL DEFAULT ''," +
                     "`ifnew` tinyint(2) unsigned NOT NULL DEFAULT 0," +
+                    "`ifrecharge` tinyint(2) unsigned NOT NULL DEFAULT 0," +
                     "PRIMARY KEY (`id`)" +
                     ") ENGINE=MyISAM DEFAULT CHARSET=utf8;", loginlist_tb);
             String inssql_loginlist = String.format("INSERT INTO %s (client, platform, server, version, account, " +
                             "devid, os, appver, model, resolution, operator, network, clientip, district, osver," +
-                            "osbuilder, devtype, ifnew) VALUES (%d, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s," +
-                            " %s, %s, %s, %s, %d);", loginlist_tb, client, platform_id, server_id, appver, uname, devid,
-                    system, appver, model, resolution, sp, network, client_ip, district, osver, osbuilder, devtype,
-                    ifnew);
+                            "osbuilder, devtype, ifnew, ifrecharge) VALUES (%d, '%s', '%s', '%s', '%s', '%s', '%s', " +
+                            "'%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', %d, %d);", loginlist_tb,
+                    client, platform_id, server_id, appver, uname, devid, system, appver, model, resolution, sp,
+                    network, client_ip, district, osver, osbuilder, devtype, ifnew, ifRech?1:0);
 
             String newonlinert_tb = "newonlinert_" + todayStr;
             String dmlsql_newonlinert_tb = String.format("CREATE TABLE IF NOT EXISTS %s (" +
@@ -754,29 +802,30 @@ public class MLoginCalcBolt extends BaseBasicBolt {
                     "UNIQUE KEY `platform` (`client`, `platform`, `server`, `datetime`, `version`)" +
                     ") ENGINE=MyISAM DEFAULT CHARSET=utf8;", newonlinert_tb);
             String inssql_newonlinert = String.format("INSERT INTO %s (client, platform, server, datetime, version, newacc)" +
-                            " VALUES (%d, %s, %s, %d, %s, %d) ON DUPLICATE KEY UPDATE newacc=%d;", newonlinert_tb, client, platform_id,
-                    server_id, todayMinuteDate, appver, newonlinert_newacc, newonlinert_newacc);
+                            " VALUES (%d, '%s', '%s', %d, '%s', %d) ON DUPLICATE KEY UPDATE newacc=%d;", newonlinert_tb,
+                    client, platform_id, server_id, todayMinuteDate, appver, newonlinert_newacc, newonlinert_newacc);
 
 
             String activedaily_hau_colname = "daut" + curHour;
             String inssql_activedaily = String.format("INSERT INTO activedaily (client, platform, server, date, version," +
-                    "dau, daunew, %s) VALUES (%d, %s, %s, %d, %s, %d, %d, %d) ON DUPLICATE KEY UPDATE %s=%d;",
+                    "dau, daunew, %s) VALUES (%d, '%s', '%s', %d, '%s', %d, %d, %d) ON DUPLICATE KEY UPDATE %s=%d;",
                     activedaily_hau_colname, client, platform_id, server_id, todayDate, appver, signinlogindaily_logins,
                     signinlogindaily_newacc, signinloginhourly_logins, activedaily_hau_colname, signinloginhourly_logins);
 
             String inssql_lostretdaily = String.format("INSERT INTO lostretdaily (client, platform, server, date, version," +
                     "retd7_dau, retd7_rechargers, retd14_dau, retd14_rechargers, retd30_dau, retd30_rechargers) VALUES (" +
-                    "%d, %s, %s, %d, %s, %d, %d, %d, %d, %d, %d) ON DUPLICATE KEY UPDATE retd7_dau=%d, retd7_rechargers=%d," +
-                    "retd14_dau=%d, retd14_rechargers=%d, retd30_dau=%d, retd30_rechargers=%d;", client, platform_id,
-                    server_id, todayDate, appver, retListd7Dau, retListd7Rech, retListd14Dau, retListd14Rech, retListd30Dau,
-                    retListd30Rech, retListd7Dau, retListd7Rech, retListd14Dau, retListd14Rech, retListd30Dau, retListd30Rech);
+                    "%d, '%s', '%s', %d, '%s', %d, %d, %d, %d, %d, %d) ON DUPLICATE KEY UPDATE retd7_dau=%d, " +
+                    "retd7_rechargers=%d, retd14_dau=%d, retd14_rechargers=%d, retd30_dau=%d, retd30_rechargers=%d;",
+                    client, platform_id, server_id, todayDate, appver, retListd7Dau, retListd7Rech, retListd14Dau,
+                    retListd14Rech, retListd30Dau, retListd30Rech, retListd7Dau, retListd7Rech, retListd14Dau,
+                    retListd14Rech, retListd30Dau, retListd30Rech);
 
             String inssql_su_participation_daily = String.format("INSERT INTO su_participation_daily (client, platform," +
                             "server, date, version, avg_logintimes_newacc, avg_logintimes_dau, avg_logintimes_rechargers) VALUES (%d," +
-                            "%s, %s, %d, %s, %d, %d, %d) ON DUPLICATE KEY UPDATE avg_logintimes_newacc=%d, avg_logintimes_dau=%d," +
-                            "avg_logintimes_rechargers=%d;", client, platform_id, server_id, login_datetime_int, appver,
-                            avg_logintimes_newacc, avg_logintimes_dau, avg_logintimes_rech, avg_logintimes_newacc,
-                            avg_logintimes_dau, avg_logintimes_rech);
+                            "'%s', '%s', %d, '%s', %d, %d, %d) ON DUPLICATE KEY UPDATE avg_logintimes_newacc=%d, " +
+                            "avg_logintimes_dau=%d, avg_logintimes_rechargers=%d;", client, platform_id, server_id,
+                    login_datetime_int, appver, avg_logintimes_newacc, avg_logintimes_dau, avg_logintimes_rech,
+                    avg_logintimes_newacc, avg_logintimes_dau, avg_logintimes_rech);
 
             String inssql_su_participation_dist_daily = "";
             String perNewaccLogintimesDistKey = "";
@@ -809,7 +858,10 @@ public class MLoginCalcBolt extends BaseBasicBolt {
                     Long perDauLogintimes = !_jedis.exists(perDauLogintimesDistKey) ? 0L : _jedis.scard(perDauLogintimesDistKey);
 
                     su_participation_dist_daily_prepare_col += ", " + perDauLogintimes.toString();
-                    su_participation_dist_daily_duplicate_col += ", dau_logintimes_perday = " + perDauLogintimes.toString();
+                    if (!"".equals(su_participation_dist_daily_duplicate_col)) {
+                        su_participation_dist_daily_duplicate_col += ", ";
+                    }
+                    su_participation_dist_daily_duplicate_col += "dau_logintimes_perday = " + perDauLogintimes.toString();
 
                     ifIns = true;
                 }
@@ -820,7 +872,10 @@ public class MLoginCalcBolt extends BaseBasicBolt {
                     Long perRechLogintimes = !_jedis.exists(perRechLogintimesDistKey) ? 0L : _jedis.scard(perRechLogintimesDistKey);
 
                     su_participation_dist_daily_prepare_col += ", " + perRechLogintimes.toString();
-                    su_participation_dist_daily_duplicate_col += ", rechargers_logintimes_perday = " + perRechLogintimes.toString();
+                    if (!"".equals(su_participation_dist_daily_duplicate_col)) {
+                        su_participation_dist_daily_duplicate_col += ", ";
+                    }
+                    su_participation_dist_daily_duplicate_col += "rechargers_logintimes_perday = " + perRechLogintimes.toString();
 
                     ifIns = true;
                 }

@@ -6,20 +6,20 @@ import backtype.storm.StormSubmitter;
 import backtype.storm.spout.SchemeAsMultiScheme;
 import backtype.storm.topology.TopologyBuilder;
 import storm.kafka.*;
-import storm.qule_mgame.bolt.MLoginCalcBolt;
-import storm.qule_mgame.bolt.MLoginVeriBolt;
-import storm.qule_mgame.spout.SampleMLoginSpout;
+import storm.qule_mgame.bolt.MLevelCalcBolt;
+import storm.qule_mgame.bolt.MLevelVeriBolt;
+import storm.qule_mgame.spout.SampleMLevelupSpout;
 
 /**
- * Created by wangxufeng on 2014/11/25.
+ * Created by wangxufeng on 2014/12/9.
  */
-public class MDailyRemainTopology {
+public class MLevelTopology {
     public static void main(String[] args) throws Exception {
         TopologyBuilder builder = new TopologyBuilder();
 
-        //登录
-        builder.setBolt("mlogin_verify_bolt", new MLoginVeriBolt(), 10).shuffleGrouping("mlogin_spout");
-        builder.setBolt("mlogin_calc_bolt", new MLoginCalcBolt(), 10).shuffleGrouping("mlogin_verify_bolt");
+        //等级
+        builder.setBolt("mlevel_verify_bolt", new MLevelVeriBolt(), 10).shuffleGrouping("mlevel_spout");
+        builder.setBolt("mlevel_calc_bolt", new MLevelCalcBolt(), 10).shuffleGrouping("mlevel_verify_bolt");
 
         Config conf = new Config();
         conf.setDebug(true);
@@ -36,20 +36,20 @@ public class MDailyRemainTopology {
             conf.put("gamecfg_path", gamecfg_path);
 
             conf.put("isOnline",true);
-            String topicLogin = "mlogin";
+            String topicLevel = "mlevel";
             String zkRoot = "/home/ztgame/storm/zkroot";
-            String spoutIdLogin = "mlogin";
+            String spoutIdLevel = "mlevel";
             BrokerHosts brokerHosts = new ZkHosts("172.29.201.208:2181,172.29.201.207:2181,172.29.201.205:2181");
 
-            SpoutConfig spoutConfLogin = new SpoutConfig(brokerHosts, topicLogin, zkRoot, spoutIdLogin);
-            spoutConfLogin.scheme = new SchemeAsMultiScheme(new StringScheme());
-            builder.setSpout("mlogin_spout", new KafkaSpout(spoutConfLogin), 1);
+            SpoutConfig spoutConfLevel = new SpoutConfig(brokerHosts, topicLevel, zkRoot, spoutIdLevel);
+            spoutConfLevel.scheme = new SchemeAsMultiScheme(new StringScheme());
+            builder.setSpout("mlevel_spout", new KafkaSpout(spoutConfLevel), 1);
 
             conf.setNumWorkers(2);
             StormSubmitter.submitTopologyWithProgressBar(args[0], conf, builder.createTopology());
         } else {
             conf.put("isOnline", false);
-            builder.setSpout("mlogin_spout", new SampleMLoginSpout(), 1);
+            builder.setSpout("mlevel_spout", new SampleMLevelupSpout(), 1);
 
             conf.setMaxTaskParallelism(2);
             LocalCluster cluster = new LocalCluster();

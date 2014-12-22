@@ -24,6 +24,7 @@ public class MBillCalcBolt extends BaseBasicBolt {
     private static mysql _dbconnect = null;
 
     private static timerCfgLoader _gamecfgLoader = new timerCfgLoader();
+    private static timerFlushDb _dbFlushTimer = new timerFlushDb();
     private static cfgLoader _cfgLoader = new cfgLoader();
     private static String _gamecfg;
 
@@ -41,7 +42,7 @@ public class MBillCalcBolt extends BaseBasicBolt {
             _gamecfg = "/config/test.games.properties";
         }
         _prop = _cfgLoader.loadConfig(_gamecfg, isOnline);
-        _jedis = new jedisUtil().getJedis(_prop.getProperty("redis.host"), Integer.parseInt(_prop.getProperty("redis.port")));
+        _jedis = new jedisUtil().getJedis(_prop.getProperty("redis.host"), Integer.parseInt(_prop.getProperty("redis.port")), 11);
 
         _dbconnect = new mysql();
 
@@ -146,6 +147,7 @@ public class MBillCalcBolt extends BaseBasicBolt {
             String rechargeListDailyKey = "mrecharge:" + game_abbr + ":" + system + ":" + platform_id + ":" + server_id +
                     ":" + rechdayStr + ":" + appver + ":account:set";
             _jedis.sadd(rechargeListDailyKey, uname);
+            _jedis.expire(rechargeListDailyKey, 60 * 24 * 60 * 60);
 
 
             //新玩家首日付费列表
@@ -190,8 +192,11 @@ public class MBillCalcBolt extends BaseBasicBolt {
 
             if (_jedis.sismember(loginAccListSvrNewKey, uname)) {
                 _jedis.sadd(rechargefdListKey, uname);
+                _jedis.expire(rechargefdListKey, 60 * 24 * 60 * 60);
                 _jedis.sadd(rechargefwListKey, uname);
+                _jedis.expire(rechargefwListKey, 60 * 24 * 60 * 60);
                 _jedis.sadd(rechargefmListKey, uname);
+                _jedis.expire(rechargefmListKey, 60 * 24 * 60 * 60);
 
                 rechamountfd += Integer.parseInt(amount);
                 rechamountfw += Integer.parseInt(amount);
@@ -211,7 +216,9 @@ public class MBillCalcBolt extends BaseBasicBolt {
 
                     if (_jedis.sismember(loginAccListSvrNewKey, uname)) {
                         _jedis.sadd(rechargefwListKey, uname);
+                        _jedis.expire(rechargefwListKey, 60 * 24 * 60 * 60);
                         _jedis.sadd(rechargefmListKey, uname);
+                        _jedis.expire(rechargefmListKey, 60 * 24 * 60 * 60);
 
                         rechamountfw += Integer.parseInt(amount);
                         rechamountfm += Integer.parseInt(amount);
@@ -232,6 +239,7 @@ public class MBillCalcBolt extends BaseBasicBolt {
 
                         if (_jedis.sismember(loginAccListSvrNewKey, uname)) {
                             _jedis.sadd(rechargefmListKey, uname);
+                            _jedis.expire(rechargefmListKey, 60 * 24 * 60 * 60);
 
                             rechamountfm += Integer.parseInt(amount);
 
@@ -242,12 +250,18 @@ public class MBillCalcBolt extends BaseBasicBolt {
             }
 
             _jedis.set(rechargefdAmountKey, rechamountfd.toString());
+            _jedis.expire(rechargefdAmountKey, 60 * 24 * 60 * 60);
             _jedis.set(rechargefwAmountKey, rechamountfw.toString());
+            _jedis.expire(rechargefwAmountKey, 60 * 24 * 60 * 60);
             _jedis.set(rechargefmAmountKey, rechamountfm.toString());
+            _jedis.expire(rechargefmAmountKey, 60 * 24 * 60 * 60);
 
             _jedis.set(rechargefdIskKey, rechiskfd.toString());
+            _jedis.expire(rechargefdIskKey, 60 * 24 * 60 * 60);
             _jedis.set(rechargefwIskKey, rechiskfw.toString());
+            _jedis.expire(rechargefwIskKey, 60 * 24 * 60 * 60);
             _jedis.set(rechargefmIskKey, rechiskfm.toString());
+            _jedis.expire(rechargefmIskKey, 60 * 24 * 60 * 60);
 
             rechargefd = !_jedis.exists(rechargefdListKey) ? 0L : _jedis.scard(rechargefdListKey);
 
@@ -264,28 +278,30 @@ public class MBillCalcBolt extends BaseBasicBolt {
         String mysql_user = _prop.getProperty("game." + game_abbr + ".mysql_user");
         String mysql_passwd= _prop.getProperty("game." + game_abbr + ".mysql_passwd");
 
-        if (mysql.getConnection(game_abbr, mysql_host, mysql_port, mysql_db, mysql_user, mysql_passwd)) {
+        if (mysql.getConnection(game_abbr, mysql_host, mysql_port, mysql_db, mysql_user, mysql_passwd)
+                && _dbFlushTimer.ifItsTime2FlushDb(client.toString()+platform_id+server_id+appver)) {
             boolean sql_ret = false;
             String sqls = "";
 
             String inssql_rechargedata = String.format("INSERT INTO recharge_order (client, platform, server, version," +
                     "datetime, order_id, status, account, cname, amount, isk, devid, os, appver, model, resolution," +
-                    "operator, network, clientip, district, osver, osbuilder, devtype, level) VALUES (%d, %s, %s, %s, %s, " +
-                    "%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE " +
-                    "amount=%s, isk=%s;", client, platform_id, server_id, appver, rechtime, order_id, ifsuccess,
-                    uname, cname, amount, isk, devid, system, appver, model, resolution, operator, network, clientip,
-                    district, osver, osbuilder, devtype, level, amount, isk);
+                    "operator, network, clientip, district, osver, osbuilder, devtype, level) VALUES (%d, '%s', '%s', " +
+                    "'%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', " +
+                    "'%s', '%s', '%s', '%s', '%s') ON DUPLICATE KEY UPDATE amount='%s', isk='%s';", client, platform_id,
+                    server_id, appver, rechtime, order_id, ifsuccess, uname, cname, amount, isk, devid, system, appver,
+                    model, resolution, operator, network, clientip, district, osver, osbuilder, devtype, level, amount,
+                    isk);
 
             String inssql_signinlogindaily = "";
             if ("1".equals(ifsuccess)) {
                 inssql_signinlogindaily = String.format("INSERT INTO signinlogindaily (client, platform, server," +
                 "date, version, rechargefd, rechamountfd, rechiskfd, rechargefw, rechamountfw, rechiskfw, rechargefm," +
-                "rechamountfm, rechiskfm) VALUES (%d, %s, %s, %s, %s, %d, %d, %d, %d, %d, %d, %d, %d, %d) ON DUPLICATE" +
-                "KEY UPDATE rechargefd=%d, rechamountfd=%d, rechiskfd=%d, rechargefw=%d, rechamountfw=%d, rechiskfw=%d," +
-                "rechargefm=%d, rechamountfm=%d, rechiskfm=%d;", client, platform_id, server_id, rechtime, appver,
-                rechargefd, rechamountfd, rechiskfd, rechargefw, rechamountfw, rechiskfw, rechargefm, rechamountfm,
-                rechiskfm, rechargefd, rechamountfd, rechiskfd, rechargefw, rechamountfw, rechiskfw, rechargefm,
-                rechamountfm, rechiskfm);
+                "rechamountfm, rechiskfm) VALUES (%d, '%s', '%s', '%s', '%s', %d, %d, %d, %d, %d, %d, %d, %d, %d) " +
+                "ON DUPLICATE KEY UPDATE rechargefd=%d, rechamountfd=%d, rechiskfd=%d, rechargefw=%d, rechamountfw=%d, " +
+                "rechiskfw=%d, rechargefm=%d, rechamountfm=%d, rechiskfm=%d;", client, platform_id, server_id, rechtime,
+                appver, rechargefd, rechamountfd, rechiskfd, rechargefw, rechamountfw, rechiskfw, rechargefm,
+                rechamountfm, rechiskfm, rechargefd, rechamountfd, rechiskfd, rechargefw, rechamountfw, rechiskfw,
+                rechargefm, rechamountfm, rechiskfm);
             }
 
             sqls += inssql_rechargedata;

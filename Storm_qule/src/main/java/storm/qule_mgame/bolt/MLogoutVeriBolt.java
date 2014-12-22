@@ -64,6 +64,7 @@ public class MLogoutVeriBolt extends BaseBasicBolt {
             String token_gen = "";
             try {
                 token_gen = new md5().gen_md5(raw_str);
+                token_gen = token_gen.substring(5, 10);
             } catch (NoSuchAlgorithmException e) {
                 e.printStackTrace();
             }

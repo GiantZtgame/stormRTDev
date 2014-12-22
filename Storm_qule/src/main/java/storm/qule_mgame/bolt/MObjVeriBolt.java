@@ -72,9 +72,11 @@ public class MObjVeriBolt extends BaseBasicBolt {
             String token_gen = "";
             try {
                 token_gen = new md5().gen_md5(raw_str);
+                token_gen = token_gen.substring(5, 10);
             } catch (NoSuchAlgorithmException e) {
                 e.printStackTrace();
             }
+
             if (token_gen.equals(token) && keywords.equals(LOG_SIGN)) {
                 collector.emit(new Values(game_abbr, platform_id, server_id, datetime, uname, cname, system, level,
                         objname, objcateid, objid, ifincr, ifbind, amount, original_amount, opname));

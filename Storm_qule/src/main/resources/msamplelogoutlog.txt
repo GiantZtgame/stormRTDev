@@ -1,4 +1,3 @@
-GMZQ|1|1|xxxxx|1401235412|mlogout|AABBCCDD|testaccount|冈比亚国家队|1200
-GMZQ|1|1|xxxxx|1401235412|mlogout|AABBCCDD|testaccount|冈比亚国家队|1200
-GMZQ|1|1|xxxxx|1401235412|mlogout|AABBCCDD|testaccount|冈比亚国家队|1200
-
+GMZQ|1|1|edc17|1401235412|mlogout|AABBCCDD|testaccount1|冈比亚国家队|1201
+GMZQ|1|1|edc17|1401235412|mlogout|AABBCCDD|testaccount2|冈比亚国家队|1202
+GMZQ|1|1|edc17|1401235412|mlogout|AABBCCDD|testaccount3|冈比亚国家队|1203

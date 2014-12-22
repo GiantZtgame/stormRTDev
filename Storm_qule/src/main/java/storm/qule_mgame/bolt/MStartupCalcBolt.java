@@ -7,6 +7,7 @@ import backtype.storm.topology.base.BaseBasicBolt;
 import backtype.storm.tuple.Tuple;
 import redis.clients.jedis.Jedis;
 import storm.qule_util.*;
+import storm.qule_util.mgame.platform2ifabroad;
 import storm.qule_util.mgame.system2client;
 
 import java.sql.SQLException;
@@ -23,6 +24,7 @@ public class MStartupCalcBolt extends BaseBasicBolt {
     private static mysql _dbconnect = null;
 
     private static timerCfgLoader _gamecfgLoader = new timerCfgLoader();
+    private static timerFlushDb _dbFlushTimer = new timerFlushDb();
     private static cfgLoader _cfgLoader = new cfgLoader();
     private static String _gamecfg;
     /**
@@ -38,7 +40,7 @@ public class MStartupCalcBolt extends BaseBasicBolt {
             _gamecfg = "/config/test.games.properties";
         }
         _prop = _cfgLoader.loadConfig(_gamecfg, isOnline);
-        _jedis = new jedisUtil().getJedis(_prop.getProperty("redis.host"), Integer.parseInt(_prop.getProperty("redis.port")));
+        _jedis = new jedisUtil().getJedis(_prop.getProperty("redis.host"), Integer.parseInt(_prop.getProperty("redis.port")), 11);
 
         _dbconnect = new mysql();
 
@@ -75,6 +77,7 @@ public class MStartupCalcBolt extends BaseBasicBolt {
         Long todayMinuteDate = date.str2timestamp(todayMinuteStr, "yyyyMMdd-HHmm");
 
         Integer client = system2client.turnSystem2ClientId(system);
+        Integer ifAbroad = platform2ifabroad.turnPlatform2ifabroad(platform_id);
 
 
         //记录启动列表
@@ -100,61 +103,125 @@ public class MStartupCalcBolt extends BaseBasicBolt {
 
         //全局累计数据key
         String overallKey = "overalldata:" + game_abbr + ":" + system + ":" + platform_id + ":hash:incr";
+        String overallAbroadKey = "overalldata:" + game_abbr + ":" + system + ":" + ifAbroad + ":hash:incr";
 
 
         //1. 各系统所有启动设备列表
         String startupDevListKey = "mstartup:" + game_abbr + ":" + system + ":" + platform_id + ":total:dev:set";
+        String startupDevListAbroadKey = "mstartup:" + game_abbr + ":" + system + ":" + ifAbroad + ":total:dev:set";
+                //String startupIosDevListKey = "mstartup:" + game_abbr + ":iostotal" + platform_id + ":total:dev:set";
         _jedis.sadd(startupDevListKey, devid);
+        _jedis.sadd(startupDevListAbroadKey, devid);
 
-        Long overalldata_launchdev;
+        Long overalldata_launchdev = 0L;
         Long overalldata_devjbs = 0L;
-        Long specNum = _jedis.scard(startupDevListKey);
-
-        if ("iosjb".equals(system)) {
-            overalldata_devjbs = specNum;
-            overalldata_launchdev = specNum + (!_jedis.exists("mstartup:" + game_abbr + ":ios:" + platform_id + ":total:dev:set") ?
-                    0L : _jedis.scard("mstartup:" + game_abbr + ":ios:" + platform_id + ":total:dev:set"));
-        } else {
-            overalldata_launchdev = specNum;
-        }
-
-        _jedis.hset(overallKey, "launchdev", overalldata_launchdev.toString());
-        _jedis.hset(overallKey, "devjbs", overalldata_devjbs.toString());
+        Long overalldata_launchdev_abroad = 0L;
+        Long overalldata_devjbs_abroad = 0L;
+//        Long specNum = _jedis.scard(startupDevListKey);
+//
+//        if ("iosjb".equals(system)) {
+//            overalldata_devjbs = specNum;
+//            overalldata_launchdev = specNum + (!_jedis.exists("mstartup:" + game_abbr + ":ios:" + platform_id + ":total:dev:set") ?
+//                    0L : _jedis.scard("mstartup:" + game_abbr + ":ios:" + platform_id + ":total:dev:set"));
+//        } else {
+//            overalldata_launchdev = specNum;
+//        }
 
 
         //2. 各系统当天所有启动设备列表
         String startupDevListDailyKey = "mstartup:" + game_abbr + ":" + system + ":" + platform_id + ":" + todayStr +
                 ":dev:set";
+        String startupDevListDailyAbroadKey = "mstartup:" + game_abbr + ":" + system + ":" + ifAbroad + ":" + todayStr +
+                ":dev:set";
         _jedis.sadd(startupDevListDailyKey, devid);
+        _jedis.expire(startupDevListDailyKey, 60 * 24 * 60 * 60);
+        _jedis.sadd(startupDevListDailyAbroadKey, devid);
+        _jedis.expire(startupDevListDailyAbroadKey, 60 * 24 * 60 * 60);
 
-        Long overalldatadaily_launchdev = _jedis.scard(startupDevListDailyKey);
+        Long overalldatadaily_launchdev = 0L;
+        Long overalldatadaily_devjbs = 0L;
+        Long overalldatadaily_launchdev_abroad = 0L;
+        Long overalldatadaily_devjbs_abroad = 0L;
+
+        if ("iosjb".equals(system) || "ios".equals(system)) {
+            //String startupDevOppositeListKey = "mstartup:" + game_abbr + ":";
+            if ("iosjb".equals(system)) {
+                overalldata_devjbs = _jedis.scard(startupDevListKey);
+                overalldatadaily_devjbs = _jedis.scard(startupDevListDailyKey);
+                overalldata_devjbs_abroad = _jedis.scard(startupDevListAbroadKey);
+                overalldatadaily_devjbs_abroad = _jedis.scard(startupDevListDailyAbroadKey);
+                //startupDevOppositeListKey += "ios:" + platform_id + ":total:dev:set";
+            } else {
+                overalldata_launchdev = _jedis.scard(startupDevListKey);
+                overalldatadaily_launchdev = _jedis.scard(startupDevListDailyKey);
+                overalldata_launchdev_abroad = _jedis.scard(startupDevListAbroadKey);
+                overalldatadaily_launchdev_abroad = _jedis.scard(startupDevListDailyAbroadKey);
+                //startupDevOppositeListKey += "iosjb:" + platform_id + ":total:dev:set";
+            }
+            //_jedis.sunionstore(startupIosDevListKey, startupDevListKey, startupDevOppositeListKey);
+            //overalldata_launchdev = _jedis.scard(startupIosDevListKey);
+        } else {
+            overalldata_launchdev = _jedis.scard(startupDevListKey);
+            overalldatadaily_launchdev = _jedis.scard(startupDevListDailyKey);
+            overalldata_launchdev_abroad = _jedis.scard(startupDevListAbroadKey);
+            overalldatadaily_launchdev_abroad = _jedis.scard(startupDevListDailyAbroadKey);
+        }
+
+
+        _jedis.hset(overallKey, "launchdev", overalldata_launchdev.toString());
+        _jedis.hset(overallKey, "devjbs", overalldata_devjbs.toString());
+        _jedis.hset(overallAbroadKey, "launchdev", overalldata_launchdev_abroad.toString());
+        _jedis.hset(overallAbroadKey, "devjbs", overalldata_devjbs_abroad.toString());
+
+
+        //Long overalldatadaily_launchdev = _jedis.scard(startupDevListDailyKey);
 
         _jedis.hset(overallKey, "launchdev:"+todayStr, overalldatadaily_launchdev.toString());
+        _jedis.hset(overallKey, "devjbs:"+todayStr, overalldatadaily_devjbs.toString());
+        _jedis.hset(overallAbroadKey, "launchdev:"+todayStr, overalldatadaily_launchdev_abroad.toString());
+        _jedis.hset(overallAbroadKey, "devjbs:"+todayStr, overalldatadaily_devjbs_abroad.toString());
+
+
 
 
         //3. 各系统当天各时段所有启动设备列表
         String startupDevListHourlyKey = "mstartup:" + game_abbr + ":" + system + ":" + platform_id + ":" + todayHourStr +
                 ":dev:set";
+        String startupDevListHourlyAbroadKey = "mstartup:" + game_abbr + ":" + system + ":" + ifAbroad + ":" + todayHourStr +
+                ":dev:set";
         _jedis.sadd(startupDevListHourlyKey, devid);
+        _jedis.expire(startupDevListHourlyKey, 60 * 24 * 60 * 60);
+        _jedis.sadd(startupDevListHourlyAbroadKey, devid);
+        _jedis.expire(startupDevListHourlyAbroadKey, 60 * 24 * 60 * 60);
 
         Long overalldatahourly_launchdev = _jedis.scard(startupDevListHourlyKey);
+        Long overalldatahourly_launchdev_abroad = _jedis.scard(startupDevListHourlyAbroadKey);
 
         _jedis.hset(overallKey, "launchdev:"+todayStr+":"+curHour, overalldatahourly_launchdev.toString());
+        _jedis.hset(overallAbroadKey, "launchdev:"+todayStr+":"+curHour, overalldatahourly_launchdev_abroad.toString());
 
 
         //4. 各系统当天各版本所有启动设备列表
         String startupDevListDailyVerlyKey = "mstartup:" + game_abbr + ":" + system + ":" + platform_id + ":" + todayStr +
                 ":" + appver + ":dev:set";
+        String startupDevListDailyVerlyAbroadKey = "mstartup:" + game_abbr + ":" + system + ":" + ifAbroad + ":" + todayStr +
+                ":" + appver + ":dev:set";
         _jedis.sadd(startupDevListDailyVerlyKey, devid);
+        _jedis.expire(startupDevListDailyVerlyKey, 60 * 24 * 60 * 60);
+        _jedis.sadd(startupDevListDailyVerlyAbroadKey, devid);
+        _jedis.expire(startupDevListDailyVerlyAbroadKey, 60 * 24 * 60 * 60);
 
         Long overalldatadailyverly_launchdev = _jedis.scard(startupDevListDailyVerlyKey);
+        Long overalldatadailyverly_launchdev_abroad = _jedis.scard(startupDevListDailyVerlyAbroadKey);
 
         _jedis.hset(overallKey, "launchdev:"+todayStr+":"+appver, overalldatadailyverly_launchdev.toString());
+        _jedis.hset(overallAbroadKey, "launchdev:"+todayStr+":"+appver, overalldatadailyverly_launchdev_abroad.toString());
 
         //5. 各系统当天各区服各版本启动设备列表
         String startupDevListSvrDailyKey = "mstartup:" + game_abbr + ":" + system + ":" + platform_id + ":" + server_id +
                 ":" + todayStr + ":" + appver + ":dev:set";
         _jedis.sadd(startupDevListSvrDailyKey, devid);
+        _jedis.expire(startupDevListSvrDailyKey, 60 * 24 * 60 * 60);
 
         Long signinlogindaily_launchdev = _jedis.scard(startupDevListSvrDailyKey);
 
@@ -163,6 +230,7 @@ public class MStartupCalcBolt extends BaseBasicBolt {
         String startupDevNumSvrDailyKey = "mstartup:" + game_abbr + ":" + system + ":" + platform_id + ":" + server_id +
                 ":" + todayStr + ":" + appver + ":dev:incr";
         _jedis.incr(startupDevNumSvrDailyKey);
+        _jedis.expire(startupDevNumSvrDailyKey, 60 * 24 * 60 * 60);
 
         Integer signinlogindaily_launch = Integer.parseInt(_jedis.get(startupDevNumSvrDailyKey));
 
@@ -171,6 +239,7 @@ public class MStartupCalcBolt extends BaseBasicBolt {
         String startupDevListSvrHourlyKey = "mstartup:" + game_abbr + ":" + system + ":" + platform_id + ":" + server_id +
                 ":" + todayHourStr + ":" + appver + ":dev:set";
         _jedis.sadd(startupDevListSvrHourlyKey, devid);
+        _jedis.expire(startupDevListSvrHourlyKey, 60 * 24 * 60 * 60);
 
         Long signinloginhourly_launchdev = _jedis.scard(startupDevListSvrHourlyKey);
 
@@ -179,6 +248,7 @@ public class MStartupCalcBolt extends BaseBasicBolt {
         String startupDevNumSvrHourlyKey = "mstartup:" + game_abbr + ":" + system + ":" + platform_id + ":" + server_id +
                 ":" + todayHourStr + ":" + appver + ":dev:incr";
         _jedis.incr(startupDevNumSvrHourlyKey);
+        _jedis.expire(startupDevNumSvrHourlyKey, 60 * 24 * 60 * 60);
 
         Integer signinloginhourly_launch = Integer.parseInt(_jedis.get(startupDevNumSvrHourlyKey));
 
@@ -196,13 +266,24 @@ public class MStartupCalcBolt extends BaseBasicBolt {
                 ":" + todayMinuteStr + ":" + appver + ":dev:new:set";
         if (1L == _jedis.sadd(startupDevListSvrKey, devid)) {
             _jedis.sadd(startupDevListSvrNewKey, devid);
+            _jedis.expire(startupDevListSvrNewKey, 60 * 24 * 60 * 60);
             _jedis.sadd(startupDevListSvrHourlyNewKey, devid);
+            _jedis.expire(startupDevListSvrHourlyNewKey, 60 * 24 * 60 * 60);
             _jedis.sadd(startupDevListSvrMinlyNewKey, devid);
+            _jedis.expire(startupDevListSvrMinlyNewKey, 60 * 24 * 60 * 60);
         }
 
         Long signinlogindaily_newdev = !_jedis.exists(startupDevListSvrNewKey) ? 0L : _jedis.scard(startupDevListSvrNewKey);
         Long signinloginhourly_newdev = !_jedis.exists(startupDevListSvrHourlyNewKey) ? 0L : _jedis.scard(startupDevListSvrHourlyNewKey);
         Long newonlinert_newdev = !_jedis.exists(startupDevListSvrMinlyNewKey) ? 0L : _jedis.scard(startupDevListSvrMinlyNewKey);
+
+
+        //flush to mstartup daily list
+        String mstartupDailyListKey = "mstartup:" + game_abbr + ":" + todayDate + ":record";
+        String mstartupDailyListValue = startup_datetime + ":" + client + ":" + platform_id + ":" + server_id +
+                ":" + appver + ":" + devid + ":" + system + ":" + model + ":" + resolution + ":" + sp + ":" + network +
+                ":" + client_ip + ":" + district + ":" + osver + ":" + osbuilder + ":" + devtype;
+        _jedis.rpush(mstartupDailyListKey, mstartupDailyListValue);
 
 
         //flush to mysql
@@ -212,15 +293,16 @@ public class MStartupCalcBolt extends BaseBasicBolt {
         String mysql_user = _prop.getProperty("game." + game_abbr + ".mysql_user");
         String mysql_passwd= _prop.getProperty("game." + game_abbr + ".mysql_passwd");
 
-        if (mysql.getConnection(game_abbr, mysql_host, mysql_port, mysql_db, mysql_user, mysql_passwd)) {
+        if (mysql.getConnection(game_abbr, mysql_host, mysql_port, mysql_db, mysql_user, mysql_passwd)
+                && _dbFlushTimer.ifItsTime2FlushDb(client.toString()+platform_id+server_id+appver)) {
             boolean sql_ret = false;
 
             String inssql_overalldata = String.format("INSERT INTO overalldata (client, platform, launchdev, devjbs)" +
-                    " VALUES (%d, %s, %d, %d) ON DUPLICATE KEY UPDATE launchdev=%d, devjbs=%d;", client, platform_id,
+                    " VALUES (%d, '%s', %d, %d) ON DUPLICATE KEY UPDATE launchdev=%d, devjbs=%d;", client, platform_id,
                     overalldata_launchdev, overalldata_devjbs, overalldata_launchdev, overalldata_devjbs);
 
             String inssql_overalldatadaily = String.format("INSERT INTO overalldatadaily (client, platform, date, launchdev)" +
-                    " VALUES (%d, %s, %d, %d) ON DUPLICATE KEY UPDATE launchdev=%d;", client, platform_id, todayDate,
+                    " VALUES (%d, '%s', %d, %d) ON DUPLICATE KEY UPDATE launchdev=%d;", client, platform_id, todayDate,
                     overalldatadaily_launchdev, overalldatadaily_launchdev);
 
             String overalldatahourly_tb = "overalldatahourly_" + todayStr;
@@ -228,7 +310,7 @@ public class MStartupCalcBolt extends BaseBasicBolt {
                     "`id` int(11) unsigned NOT NULL AUTO_INCREMENT," +
                     "`client` tinyint(3) unsigned NOT NULL," +
                     "`platform` mediumint(5) unsigned NOT NULL," +
-                    "`hour` tiny(3) unsigned NOT NULL," +
+                    "`hour` tinyint(3) unsigned NOT NULL," +
                     "`hau` int(11) unsigned NOT NULL DEFAULT 0," +
                     "`maxonline` int(11) unsigned NOT NULL DEFAULT 0," +
                     "`launchdev` int(11) unsigned NOT NULL DEFAULT 0," +
@@ -236,15 +318,15 @@ public class MStartupCalcBolt extends BaseBasicBolt {
                     "UNIQUE KEY `platform` (`client`, `platform`, `hour`)" +
                     ") ENGINE=MyISAM DEFAULT CHARSET=utf8;", overalldatahourly_tb);
             String inssql_overalldatahourly = String.format("INSERT INTO %s (client, platform, hour, launchdev) VALUES " +
-                    "(%d, %s, %s, %d) ON DUPLICATE KEY UPDATE launchdev=%d;", overalldatahourly_tb, client, platform_id,
+                    "(%d, '%s', '%s', %d) ON DUPLICATE KEY UPDATE launchdev=%d;", overalldatahourly_tb, client, platform_id,
                     curHour, overalldatahourly_launchdev, overalldatahourly_launchdev);
 
             String inssql_overalldatadailyverly = String.format("INSERT INTO overalldatadailyverly (client, platform, " +
-                    "date, version, launchdev) VALUES (%d, %s, %d, %s, %d) ON DUPLICATE KEY UPDATE launchdev=%d;",
+                    "date, version, launchdev) VALUES (%d, '%s', %d, %s, %d) ON DUPLICATE KEY UPDATE launchdev=%d;",
                     client, platform_id, todayDate, appver, overalldatadailyverly_launchdev, overalldatadailyverly_launchdev);
 
             String inssql_signinlogindaily = String.format("INSERT INTO signinlogindaily (client, platform, server, date," +
-                    "version, newdev, launchdev, launch) VALUES (%d, %s, %s, %d, %s, %d, %d, %d) ON DUPLICATE KEY UPDATE" +
+                    "version, newdev, launchdev, launch) VALUES (%d, '%s', '%s', %d, '%s', %d, %d, %d) ON DUPLICATE KEY UPDATE" +
                     " newdev=%d, launchdev=%d, launch=%d;", client, platform_id, server_id, todayDate, appver,
                     signinlogindaily_newdev, signinlogindaily_launchdev, signinlogindaily_launch,
                     signinlogindaily_newdev, signinlogindaily_launchdev, signinlogindaily_launch);
@@ -255,7 +337,7 @@ public class MStartupCalcBolt extends BaseBasicBolt {
                     "`client` tinyint(3) unsigned NOT NULL," +
                     "`platform` mediumint(5) unsigned NOT NULL," +
                     "`server` mediumint(5) unsigned NOT NULL," +
-                    "`hour` tiny(3) unsigned NOT NULL," +
+                    "`hour` tinyint(3) unsigned NOT NULL," +
                     "`version` char(10) CHARACTER SET UTF8 NOT NULL," +
                     "`newdev` int(11) unsigned NOT NULL DEFAULT 0," +
                     "`newacc` int(11) unsigned NOT NULL DEFAULT 0," +
@@ -267,7 +349,7 @@ public class MStartupCalcBolt extends BaseBasicBolt {
                     "UNIQUE KEY `platform` (`client`, `platform`, `server`, `hour`, `version`)" +
                     ") ENGINE=MyISAM DEFAULT CHARSET=utf8;", signinloginhourly_tb);
             String inssql_signinloginhourly = String.format("INSERT INTO %s (client, platform, server, hour, version," +
-                    "newdev, launchdev, launch) VALUES (%d, %s, %s, %s, %s, %d, %d, %d) ON DUPLICATE KEY UPDATE " +
+                    "newdev, launchdev, launch) VALUES (%d, '%s', '%s', '%s', '%s', %d, %d, %d) ON DUPLICATE KEY UPDATE " +
                     "newdev=%d, launchdev=%d, launch=%d;", signinloginhourly_tb, client, platform_id, server_id, curHour,
                     appver, signinloginhourly_newdev, signinloginhourly_launchdev, signinloginhourly_launch,
                     signinloginhourly_newdev, signinloginhourly_launchdev, signinloginhourly_launch);
@@ -284,7 +366,7 @@ public class MStartupCalcBolt extends BaseBasicBolt {
                     "PRIMARY KEY (`id`)" +
                     ") ENGINE=MyISAM DEFAULT CHARSET=utf8;", startuplist_tb);
             String inssql_startuplist = String.format("INSERT INTO %s (client, platform, server, version, account, " +
-                    "devid) VALUES (%d, %s, %s, %s, %s, %s);", startuplist_tb, client, platform_id, server_id, appver,
+                    "devid) VALUES (%d, '%s', '%s', '%s', '%s', '%s');", startuplist_tb, client, platform_id, server_id, appver,
                     "", devid);
 
             String newonlinert_tb = "newonlinert_" + todayStr;
@@ -302,7 +384,7 @@ public class MStartupCalcBolt extends BaseBasicBolt {
                     "UNIQUE KEY `platform` (`client`, `platform`, `server`, `datetime`, `version`)" +
                     ") ENGINE=MyISAM DEFAULT CHARSET=utf8;", newonlinert_tb);
             String inssql_newonlinert = String.format("INSERT INTO %s (client, platform, server, datetime, version, newdev)" +
-                    " VALUES (%d, %s, %s, %d, %s, %d) ON DUPLICATE KEY UPDATE newdev=%d;", newonlinert_tb, client, platform_id,
+                    " VALUES (%d, '%s', '%s', %d, '%s', %d) ON DUPLICATE KEY UPDATE newdev=%d;", newonlinert_tb, client, platform_id,
                     server_id, todayMinuteDate, appver, newonlinert_newdev, newonlinert_newdev);
 
 //            try {

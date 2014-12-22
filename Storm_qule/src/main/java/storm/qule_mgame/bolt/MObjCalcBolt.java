@@ -22,6 +22,7 @@ public class MObjCalcBolt extends BaseBasicBolt {
     private static mysql _dbconnect = null;
 
     private static timerCfgLoader _gamecfgLoader = new timerCfgLoader();
+    private static timerFlushDb _dbFlushTimer = new timerFlushDb();
     private static cfgLoader _cfgLoader = new cfgLoader();
     private static String _gamecfg;
 
@@ -39,7 +40,7 @@ public class MObjCalcBolt extends BaseBasicBolt {
             _gamecfg = "/config/test.games.properties";
         }
         _prop = _cfgLoader.loadConfig(_gamecfg, isOnline);
-        _jedis = new jedisUtil().getJedis(_prop.getProperty("redis.host"), Integer.parseInt(_prop.getProperty("redis.port")));
+        _jedis = new jedisUtil().getJedis(_prop.getProperty("redis.host"), Integer.parseInt(_prop.getProperty("redis.port")), 11);
 
         _dbconnect = new mysql();
 
@@ -81,14 +82,15 @@ public class MObjCalcBolt extends BaseBasicBolt {
         String mysql_user = _prop.getProperty("game." + game_abbr + ".mysql_user");
         String mysql_passwd= _prop.getProperty("game." + game_abbr + ".mysql_passwd");
 
-        if (mysql.getConnection(game_abbr, mysql_host, mysql_port, mysql_db, mysql_user, mysql_passwd)) {
+        if (mysql.getConnection(game_abbr, mysql_host, mysql_port, mysql_db, mysql_user, mysql_passwd)
+                && _dbFlushTimer.ifItsTime2FlushDb(client.toString()+platform_id+server_id)) {
             boolean sql_ret = false;
             String sqls = "";
 
             String obj_tb = "obj_" + platform_id + "_" + server_id;
             String dmlsql_obj_tb = String.format("CREATE TABLE IF NOT EXISTS %s (" +
                     "`id` int(11) unsigned NOT NULL AUTO_INCREMENT," +
-                    "`client` tinyint(3)" +
+                    "`client` tinyint(3) unsigned NOT NULL," +
                     "`platform` mediumint(5) unsigned NOT NULL," +
                     "`server` mediumint(5) unsigned NOT NULL," +
                     "`datetime` int(11) unsigned NOT NULL," +
@@ -106,13 +108,14 @@ public class MObjCalcBolt extends BaseBasicBolt {
                     "PRIMARY KEY (`id`)" +
                     ") ENGINE=MyISAM DEFAULT CHARSET=utf8;", obj_tb);
             String inssql_obj = String.format("INSERT INTO %s (client, platform, server, datetime, uname, cname, level, " +
-                    "objname, objcateid, objid, ifincr, ifbind, amount, original_amount, opname) VALUES (%d, %s, %s, %d," +
-                    " %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);", obj_tb, client, platform_id, server_id, obj_datetime_date,
-                    uname, cname, level, objname, objcateid, objid, ifincr, ifbind, amount, original_amount, opname);
+                    "objname, objcateid, objid, ifincr, ifbind, amount, original_amount, opname) VALUES (%d, '%s', '%s'," +
+                    " %d, '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s');", obj_tb, client,
+                    platform_id, server_id, obj_datetime_int, uname, cname, level, objname, objcateid, objid, ifincr,
+                    ifbind, amount, original_amount, opname);
 
             sqls += dmlsql_obj_tb;
             sqls += inssql_obj;
-
+System.out.println("------------" + sqls);
             try {
                 sql_ret = _dbconnect.DirectUpdateBatch(game_abbr, sqls);
             } catch (SQLException e) {

@@ -43,7 +43,7 @@ public class SampleMStartupSpout extends BaseRichSpout {
         }
 
         String sentence = sampleLogLine.toString();
-
+System.out.println("++++++%%%%%%%" + sentence);
         _collector.emit(new Values(sentence));
     }
 

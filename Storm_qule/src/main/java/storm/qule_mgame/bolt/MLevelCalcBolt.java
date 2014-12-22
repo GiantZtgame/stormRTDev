@@ -23,6 +23,7 @@ public class MLevelCalcBolt extends BaseBasicBolt {
     private static mysql _dbconnect = null;
 
     private static timerCfgLoader _gamecfgLoader = new timerCfgLoader();
+    private static timerFlushDb _dbFlushTimer = new timerFlushDb();
     private static cfgLoader _cfgLoader = new cfgLoader();
     private static String _gamecfg;
 
@@ -40,7 +41,7 @@ public class MLevelCalcBolt extends BaseBasicBolt {
             _gamecfg = "/config/test.games.properties";
         }
         _prop = _cfgLoader.loadConfig(_gamecfg, isOnline);
-        _jedis = new jedisUtil().getJedis(_prop.getProperty("redis.host"), Integer.parseInt(_prop.getProperty("redis.port")));
+        _jedis = new jedisUtil().getJedis(_prop.getProperty("redis.host"), Integer.parseInt(_prop.getProperty("redis.port")), 11);
 
         _dbconnect = new mysql();
 
@@ -115,7 +116,9 @@ public class MLevelCalcBolt extends BaseBasicBolt {
                 todayStr + ":" + appver + ":" + level + ":lvdist:incr";
 
         Long mlevelTotalTime = _jedis.incrBy(mlevelTotalTimeKey, costTime);
+        _jedis.expire(mlevelTotalTimeKey, 60 * 24 * 60 * 60);
         Long mlevelTotalTimes = _jedis.incr(mlevelTotalTimesKey);
+        _jedis.expire(mlevelTotalTimesKey, 60 * 24 * 60 * 60);
 
         Integer client = system2client.turnSystem2ClientId(system);
 
@@ -139,11 +142,13 @@ public class MLevelCalcBolt extends BaseBasicBolt {
         }
         String mlevelSegmentAccKey = mlevelSegmentAccFormerKey + mlevelSegmentId.toString() + mlevelSegmentAccLatterKey;
         Long mlevelSegmentAcc = _jedis.incr(mlevelSegmentAccKey);
+        _jedis.expire(mlevelSegmentAccKey, 60 * 24 * 60 * 60);
 
 
 
         //level distribution
         Long mlevelDistThisLvNum = _jedis.incr(mlevelDistKey);
+        _jedis.expire(mlevelDistKey, 60 * 24 * 60 * 60);
 
         Integer formerLv = 0;
         Long mlevelDistFormerLvNum = 0L;
@@ -155,8 +160,81 @@ public class MLevelCalcBolt extends BaseBasicBolt {
                     Integer.parseInt(_jedis.get(mlevelDistFormerLvKey));
             if (mlevelDistFormerLvNum > 0L) {
                 mlevelDistFormerLvNum = _jedis.incrBy(mlevelDistFormerLvKey, -1);
+                _jedis.expire(mlevelDistFormerLvKey, 60 * 24 * 60 * 60);
             }
         }
+
+
+
+        //flush to level cache list
+        String mlevelFlushKey = "mlevel:" + game_abbr + ":" + todayDate + ":record";
+        String mlevelFlushField = client.toString() + ":" + platform_id + ":" + server_id + ":" + appver + ":" + level;
+        List<String> mlevelCachedDetail = _jedis.hmget(mlevelFlushKey, mlevelFlushField);
+        String mlevelFlushValue = "";
+        if (!mlevelCachedDetail.isEmpty()) {
+            mlevelFlushValue = mlevelCachedDetail.get(0);
+        }
+        String[] mlevelFlushValueList = {};
+        if (!mlevelFlushValue.equals("")) {
+            mlevelFlushValueList = mlevelFlushValue.split(":");
+        }
+        String lv_time = mlevelTotalTime.toString(), lv_times = mlevelTotalTimes.toString(),
+                lv_num = mlevelDistThisLvNum.toString(), seg1_acc = "0", seg2_acc = "0", seg3_acc = "0", seg4_acc = "0",
+                seg5_acc = "0", seg6_acc = "0", seg7_acc = "0", seg8_acc = "0";
+        try {
+            seg1_acc = mlevelFlushValueList[3];
+        } catch (ArrayIndexOutOfBoundsException e) {}
+        try {
+            seg2_acc = mlevelFlushValueList[4];
+        } catch (ArrayIndexOutOfBoundsException e) {}
+        try {
+            seg3_acc = mlevelFlushValueList[5];
+        } catch (ArrayIndexOutOfBoundsException e) {}
+        try {
+            seg4_acc = mlevelFlushValueList[6];
+        } catch (ArrayIndexOutOfBoundsException e) {}
+        try {
+            seg5_acc = mlevelFlushValueList[7];
+        } catch (ArrayIndexOutOfBoundsException e) {}
+        try {
+            seg6_acc = mlevelFlushValueList[8];
+        } catch (ArrayIndexOutOfBoundsException e) {}
+        try {
+            seg7_acc = mlevelFlushValueList[9];
+        } catch (ArrayIndexOutOfBoundsException e) {}
+        try {
+            seg8_acc = mlevelFlushValueList[10];
+        } catch (ArrayIndexOutOfBoundsException e) {}
+
+        switch (mlevelSegmentId) {
+            case 1:
+                seg1_acc = mlevelSegmentAcc.toString();
+                break;
+            case 2:
+                seg2_acc = mlevelSegmentAcc.toString();
+                break;
+            case 3:
+                seg3_acc = mlevelSegmentAcc.toString();
+                break;
+            case 4:
+                seg4_acc = mlevelSegmentAcc.toString();
+                break;
+            case 5:
+                seg5_acc = mlevelSegmentAcc.toString();
+                break;
+            case 6:
+                seg6_acc = mlevelSegmentAcc.toString();
+                break;
+            case 7:
+                seg7_acc = mlevelSegmentAcc.toString();
+                break;
+            case 8:
+                seg8_acc = mlevelSegmentAcc.toString();
+                break;
+        }
+        String mlevelFlushNewValue = lv_time + ":" + lv_times + ":" + lv_num + ":" + seg1_acc + ":" + seg2_acc + ":" +
+                seg3_acc + ":" + seg4_acc + ":" + seg5_acc + ":" + seg6_acc + ":" + seg7_acc + ":" + seg8_acc;
+        _jedis.hset(mlevelFlushKey, mlevelFlushField, mlevelFlushNewValue);
 
 
 
@@ -168,7 +246,8 @@ public class MLevelCalcBolt extends BaseBasicBolt {
         String mysql_user = _prop.getProperty("game." + game_abbr + ".mysql_user");
         String mysql_passwd= _prop.getProperty("game." + game_abbr + ".mysql_passwd");
 
-        if (mysql.getConnection(game_abbr, mysql_host, mysql_port, mysql_db, mysql_user, mysql_passwd)) {
+        if (mysql.getConnection(game_abbr, mysql_host, mysql_port, mysql_db, mysql_user, mysql_passwd)
+                && _dbFlushTimer.ifItsTime2FlushDb(client.toString()+platform_id+server_id+appver)) {
             boolean sql_ret = false;
             String sqls = "";
 

@@ -1,3 +1,6 @@
-GMZQ|1|1|xxxxx|1401235412|mobj|testaccount|曼联|ios|11|葵花宝典|123|321|1|0|1|100|哈哈
-GMZQ|1|1|xxxxx|1401235412|mobj|testaccount|曼联|ios|11|葵花宝典|123|321|1|0|1|100|哈哈
-GMZQ|1|1|xxxxx|1401235412|mobj|testaccount|曼联|ios|11|葵花宝典|123|321|1|0|1|100|哈哈
+GMZQ|1|1|edc17|1401235412|mobj|testaccount|曼联|ios|11|葵花宝典|123|321|1|0|1|100|哈哈
+GMZQ|1|1|edc17|1401235412|mobj|testaccount|曼联|ios|11|葵花宝典|123|321|1|0|1|100|哈哈
+GMZQ|1|1|edc17|1401235412|mobj|testaccount|曼联|ios|11|葵花宝典1|123|321|1|0|1|100|哈哈
+GMZQ|1|1|edc17|1401235413|mobj|testaccount|曼联|ios|11|葵花宝典2|123|321|1|0|1|100|哈哈
+GMZQ|1|1|edc17|1401235414|mobj|testaccount|曼联|ios|11|葵花宝典3|123|321|1|0|1|100|哈哈
+GMZQ|1|1|edc17|1401235415|mobj|testaccount|曼联|ios|11|葵花宝典4|123|321|1|0|1|100|哈哈
