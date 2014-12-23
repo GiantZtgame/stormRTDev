@@ -148,10 +148,10 @@ public class MStartupCalcBolt extends BaseBasicBolt {
             if ("iosjb".equals(system) || "ios".equals(system)) {
                 //String startupDevOppositeListKey = "mstartup:" + game_abbr + ":";
                 if ("iosjb".equals(system)) {
-                    overalldata_devjbs = _jedis.scard(startupDevListKey);
-                    overalldatadaily_devjbs = _jedis.scard(startupDevListDailyKey);
-                    overalldata_devjbs_abroad = _jedis.scard(startupDevListAbroadKey);
-                    overalldatadaily_devjbs_abroad = _jedis.scard(startupDevListDailyAbroadKey);
+                    overalldata_devjbs = overalldata_launchdev = _jedis.scard(startupDevListKey);
+                    overalldatadaily_devjbs = overalldatadaily_launchdev = _jedis.scard(startupDevListDailyKey);
+                    overalldata_devjbs_abroad = overalldata_launchdev_abroad = _jedis.scard(startupDevListAbroadKey);
+                    overalldatadaily_devjbs_abroad = overalldatadaily_launchdev_abroad = _jedis.scard(startupDevListDailyAbroadKey);
                     //startupDevOppositeListKey += "ios:" + platform_id + ":total:dev:set";
                 } else {
                     overalldata_launchdev = _jedis.scard(startupDevListKey);
