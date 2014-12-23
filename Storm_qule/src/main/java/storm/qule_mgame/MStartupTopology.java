@@ -36,14 +36,14 @@ public class MStartupTopology {
             conf.put("gamecfg_path", gamecfg_path);
 
             conf.put("isOnline",true);
-            String topicLogin = "mlogin";
+            String topicStartup = "mstartup";
             String zkRoot = "/home/ztgame/storm/zkroot";
-            String spoutIdLogin = "mstartup";
+            String spoutIdStartup = "mstartup";
             BrokerHosts brokerHosts = new ZkHosts("172.29.201.208:2181,172.29.201.207:2181,172.29.201.205:2181");
 
-            SpoutConfig spoutConfLogin = new SpoutConfig(brokerHosts, topicLogin, zkRoot, spoutIdLogin);
-            spoutConfLogin.scheme = new SchemeAsMultiScheme(new StringScheme());
-            builder.setSpout("mstartup_spout", new KafkaSpout(spoutConfLogin), 1);
+            SpoutConfig spoutConfStartup = new SpoutConfig(brokerHosts, topicStartup, zkRoot, spoutIdStartup);
+            spoutConfStartup.scheme = new SchemeAsMultiScheme(new StringScheme());
+            builder.setSpout("mstartup_spout", new KafkaSpout(spoutConfStartup), 1);
 
             conf.setNumWorkers(2);
             StormSubmitter.submitTopologyWithProgressBar(args[0], conf, builder.createTopology());
