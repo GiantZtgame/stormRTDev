@@ -105,12 +105,12 @@ public class MStartupCalcBolt extends BaseBasicBolt {
 
             //全局累计数据key
             String overallKey = "overalldata:" + game_abbr + ":" + system + ":" + platform_id + ":hash:incr";
-            String overallAbroadKey = "overalldata:" + game_abbr + ":" + system + ":" + ifAbroad + ":hash:incr";
+            String overallAbroadKey = "overalldata:" + game_abbr + ":" + system + ":" + ifAbroad + ":hash:abroad:incr";
 
 
             //1. 各系统所有启动设备列表
             String startupDevListKey = "mstartup:" + game_abbr + ":" + system + ":" + platform_id + ":total:dev:set";
-            String startupDevListAbroadKey = "mstartup:" + game_abbr + ":" + system + ":" + ifAbroad + ":total:dev:set";
+            String startupDevListAbroadKey = "mstartup:" + game_abbr + ":" + system + ":" + ifAbroad + ":total:dev:abroad:set";
             //String startupIosDevListKey = "mstartup:" + game_abbr + ":iostotal" + platform_id + ":total:dev:set";
             _jedis.sadd(startupDevListKey, devid);
             _jedis.sadd(startupDevListAbroadKey, devid);
@@ -134,7 +134,7 @@ public class MStartupCalcBolt extends BaseBasicBolt {
             String startupDevListDailyKey = "mstartup:" + game_abbr + ":" + system + ":" + platform_id + ":" + todayStr +
                     ":dev:set";
             String startupDevListDailyAbroadKey = "mstartup:" + game_abbr + ":" + system + ":" + ifAbroad + ":" + todayStr +
-                    ":dev:set";
+                    ":dev:abroad:set";
             _jedis.sadd(startupDevListDailyKey, devid);
             _jedis.expire(startupDevListDailyKey, 60 * 24 * 60 * 60);
             _jedis.sadd(startupDevListDailyAbroadKey, devid);
@@ -188,7 +188,7 @@ public class MStartupCalcBolt extends BaseBasicBolt {
             String startupDevListHourlyKey = "mstartup:" + game_abbr + ":" + system + ":" + platform_id + ":" + todayHourStr +
                     ":dev:set";
             String startupDevListHourlyAbroadKey = "mstartup:" + game_abbr + ":" + system + ":" + ifAbroad + ":" + todayHourStr +
-                    ":dev:set";
+                    ":dev:abroad:set";
             _jedis.sadd(startupDevListHourlyKey, devid);
             _jedis.expire(startupDevListHourlyKey, 60 * 24 * 60 * 60);
             _jedis.sadd(startupDevListHourlyAbroadKey, devid);
@@ -205,7 +205,7 @@ public class MStartupCalcBolt extends BaseBasicBolt {
             String startupDevListDailyVerlyKey = "mstartup:" + game_abbr + ":" + system + ":" + platform_id + ":" + todayStr +
                     ":" + appver + ":dev:set";
             String startupDevListDailyVerlyAbroadKey = "mstartup:" + game_abbr + ":" + system + ":" + ifAbroad + ":" + todayStr +
-                    ":" + appver + ":dev:set";
+                    ":" + appver + ":dev:abroad:set";
             _jedis.sadd(startupDevListDailyVerlyKey, devid);
             _jedis.expire(startupDevListDailyVerlyKey, 60 * 24 * 60 * 60);
             _jedis.sadd(startupDevListDailyVerlyAbroadKey, devid);

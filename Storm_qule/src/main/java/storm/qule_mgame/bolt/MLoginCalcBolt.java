@@ -109,7 +109,7 @@ public class MLoginCalcBolt extends BaseBasicBolt {
 
         //全局累计数据key
         String overallKey = "overalldata:" + game_abbr + ":" + system + ":" + platform_id + ":hash:incr";
-        String overallAbroadKey = "overalldata:" + game_abbr + ":" + system + ":" + ifAbroad + ":hash:incr";
+        String overallAbroadKey = "overalldata:" + game_abbr + ":" + system + ":" + ifAbroad + ":hash:abroad:incr";
 
 
         //1. 各系统所有登陆账号列表
