@@ -43,11 +43,11 @@ public class MRegVeriBolt extends BaseBasicBolt {
         //refresh gamecfg
         _prop = _gamecfgLoader.loadCfg(_gamecfg, _prop);
 
-        //GMZQ|1|1|xxxxx|1401235412|mreg|AABBCCDD|testaccount|冰岛国家队|1|ios/iosjb/android|1.1|Samsungxxx|1920x1080|CMCC|3g|1.1.1.1|shanghai
+        //GMZQ|1|1|xxxxx|1401235412|mreg|AABBCCDD|testaccount|冰岛国家队|1|ios/iosjb/android|1.1|Samsungxxx|1920x1080|CMCC|3g|1.1.1.1|shanghai|ios7.1.2|Apple|iPhone 5S
         String sentence = tuple.getString(0);
         String[] logs;
         logs = sentence.split("\\|");
-        if (18 == logs.length) {
+        if (21 == logs.length) {
             String game_abbr = logs[0];
             String platform_id = logs[1];
             String server_id = logs[2];
@@ -66,6 +66,9 @@ public class MRegVeriBolt extends BaseBasicBolt {
             String network = logs[15];
             String client_ip = logs[16];
             String district = logs[17];
+            String osver = logs[18];
+            String osbuilder = logs[19];
+            String devtype = logs[20];
 
             if (reg_success.equals("1")) {
                 String log_key = _prop.getProperty("game." + game_abbr + ".key");
@@ -78,7 +81,7 @@ public class MRegVeriBolt extends BaseBasicBolt {
                 }
                 if (token_gen.equals(token) && keywords.equals(LOG_SIGN)) {
                     collector.emit(new Values(game_abbr, platform_id, server_id, datetime, devid, uname, cname, system,
-                            appver, model, resolution, sp, network, client_ip, district));
+                            appver, model, resolution, sp, network, client_ip, district, osver, osbuilder, devtype));
                 }
             }
         }
@@ -87,6 +90,7 @@ public class MRegVeriBolt extends BaseBasicBolt {
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
         declarer.declare(new Fields("game_abbr", "platform_id", "server_id", "reg_datetime", "devid", "uname", "cname",
-                "system", "appver", "model", "resolution", "sp", "network", "client_ip", "district"));
+                "system", "appver", "model", "resolution", "sp", "network", "client_ip", "district", "osver",
+                "osbuilder", "devtype"));
     }
 }

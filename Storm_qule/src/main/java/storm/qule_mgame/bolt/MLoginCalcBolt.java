@@ -693,71 +693,246 @@ public class MLoginCalcBolt extends BaseBasicBolt {
         String mysql_user = _prop.getProperty("game." + game_abbr + ".mysql_user");
         String mysql_passwd= _prop.getProperty("game." + game_abbr + ".mysql_passwd");
 
-        if (mysql.getConnection(game_abbr, mysql_host, mysql_port, mysql_db, mysql_user, mysql_passwd)
-                && _dbFlushTimer.ifItsTime2FlushDb(client.toString()+platform_id+server_id+appver)) {
+        if (mysql.getConnection(game_abbr, mysql_host, mysql_port, mysql_db, mysql_user, mysql_passwd)) {
             boolean sql_ret = false;
             String sqls = "";
 
-            String inssql_overalldata = String.format("INSERT INTO overalldata (client, platform, accounts)" +
-                            " VALUES (%d, '%s', %d) ON DUPLICATE KEY UPDATE accounts=%d;", client, platform_id,
-                    overalldata_accounts, overalldata_accounts);
+            String inssql_overalldata = "";
+            String inssql_overalldatadaily = "";
+            String dmlsql_overalldatahourly_tb = "";
+            String inssql_overalldatahourly = "";
+            String inssql_overalldatadailyverly = "";
+            String inssql_signinlogindaily = "";
+            String dmlsql_signinloginhourly_tb = "";
+            String inssql_signinloginhourly = "";
+            String dmlsql_loginlist_tb = "";
+            String inssql_loginlist = "";
+            String dmlsql_newonlinert_tb = "";
+            String inssql_newonlinert = "";
+            String inssql_activedaily = "";
+            String inssql_lostretdaily = "";
+            String inssql_su_participation_daily = "";
 
-            String inssql_overalldatadaily = String.format("INSERT INTO overalldatadaily (client, platform, date, dau," +
-                            "daunew) VALUES (%d, '%s', %d, %d, %d) ON DUPLICATE KEY UPDATE dau=%d, daunew=%d;", client,
-                    platform_id, todayDate, overalldatadaily_dau, overalldatadaily_daunew, overalldatadaily_dau,
-                    overalldatadaily_daunew);
 
-            String overalldatahourly_tb = "overalldatahourly_" + todayStr;
-            String dmlsql_overalldatahourly_tb = String.format("CREATE TABLE IF NOT EXISTS %s (" +
-                    "`id` int(11) unsigned NOT NULL AUTO_INCREMENT," +
-                    "`client` tinyint(3) unsigned NOT NULL," +
-                    "`platform` mediumint(5) unsigned NOT NULL," +
-                    "`hour` tinyint(3) unsigned NOT NULL," +
-                    "`hau` int(11) unsigned NOT NULL DEFAULT 0," +
-                    "`maxonline` int(11) unsigned NOT NULL DEFAULT 0," +
-                    "`launchdev` int(11) unsigned NOT NULL DEFAULT 0," +
-                    "PRIMARY KEY (`id`)," +
-                    "UNIQUE KEY `platform` (`client`, `platform`, `hour`)" +
-                    ") ENGINE=MyISAM DEFAULT CHARSET=utf8;", overalldatahourly_tb);
-            String inssql_overalldatahourly = String.format("INSERT INTO %s (client, platform, hour, hau) VALUES (" +
-                    "%d, '%s', '%s', %d) ON DUPLICATE KEY UPDATE hau=%d;", overalldatahourly_tb, client, platform_id,
-                    curHour, overalldatahourly_hau, overalldatahourly_hau);
+            if (_dbFlushTimer.ifItsTime2FlushDb(client.toString()+platform_id+server_id+appver)) {
+                inssql_overalldata = String.format("INSERT INTO overalldata (client, platform, accounts)" +
+                                " VALUES (%d, '%s', %d) ON DUPLICATE KEY UPDATE accounts=%d;", client, platform_id,
+                        overalldata_accounts, overalldata_accounts);
 
-            String inssql_overalldatadailyverly = String.format("INSERT INTO overalldatadailyverly (client, platform, " +
-                            "date, version, dau, daunew) VALUES (%d, '%s', %d, '%s', %d, %d) ON DUPLICATE KEY UPDATE " +
-                            "dau=%d, daunew=%d;", client, platform_id, todayDate, appver, overalldatadailyverly_dau,
-                    overalldatadailyverly_daunew, overalldatadailyverly_dau, overalldatadailyverly_daunew);
+                inssql_overalldatadaily = String.format("INSERT INTO overalldatadaily (client, platform, date, dau," +
+                                "daunew) VALUES (%d, '%s', %d, %d, %d) ON DUPLICATE KEY UPDATE dau=%d, daunew=%d;", client,
+                        platform_id, todayDate, overalldatadaily_dau, overalldatadaily_daunew, overalldatadaily_dau,
+                        overalldatadaily_daunew);
 
-            String inssql_signinlogindaily = String.format("INSERT INTO signinlogindaily (client, platform, server, date," +
-                            "version, newacc, logins) VALUES (%d, '%s', '%s', %d, '%s', %d, %d) ON DUPLICATE KEY UPDATE" +
-                            " newacc=%d, logins=%d;", client, platform_id, server_id, todayDate, appver,
-                    signinlogindaily_newacc, signinlogindaily_logins, signinlogindaily_newacc, signinlogindaily_logins);
+                String overalldatahourly_tb = "overalldatahourly_" + todayStr;
+                dmlsql_overalldatahourly_tb = String.format("CREATE TABLE IF NOT EXISTS %s (" +
+                        "`id` int(11) unsigned NOT NULL AUTO_INCREMENT," +
+                        "`client` tinyint(3) unsigned NOT NULL," +
+                        "`platform` mediumint(5) unsigned NOT NULL," +
+                        "`hour` tinyint(3) unsigned NOT NULL," +
+                        "`hau` int(11) unsigned NOT NULL DEFAULT 0," +
+                        "`maxonline` int(11) unsigned NOT NULL DEFAULT 0," +
+                        "`launchdev` int(11) unsigned NOT NULL DEFAULT 0," +
+                        "PRIMARY KEY (`id`)," +
+                        "UNIQUE KEY `platform` (`client`, `platform`, `hour`)" +
+                        ") ENGINE=MyISAM DEFAULT CHARSET=utf8;", overalldatahourly_tb);
+                inssql_overalldatahourly = String.format("INSERT INTO %s (client, platform, hour, hau) VALUES (" +
+                                "%d, '%s', '%s', %d) ON DUPLICATE KEY UPDATE hau=%d;", overalldatahourly_tb, client, platform_id,
+                        curHour, overalldatahourly_hau, overalldatahourly_hau);
 
-            String signinloginhourly_tb = "signinloginhourly_" + todayStr;
-            String dmlsql_signinloginhourly_tb = String.format("CREATE TABLE IF NOT EXISTS %s (" +
-                    "`id` int(11) unsigned NOT NULL AUTO_INCREMENT," +
-                    "`client` tinyint(3) unsigned NOT NULL," +
-                    "`platform` mediumint(5) unsigned NOT NULL," +
-                    "`server` mediumint(5) unsigned NOT NULL," +
-                    "`hour` tinyint(3) unsigned NOT NULL," +
-                    "`version` char(10) CHARACTER SET UTF8 NOT NULL," +
-                    "`newdev` int(11) unsigned NOT NULL DEFAULT 0," +
-                    "`newacc` int(11) unsigned NOT NULL DEFAULT 0," +
-                    "`logins` int(11) unsigned NOT NULL DEFAULT 0," +
-                    "`launchdev` int(11) unsigned NOT NULL DEFAULT 0," +
-                    "`launch` int(11) unsigned NOT NULL DEFAULT 0," +
-                    "`lasttime` int(11) unsigned NOT NULL DEFAULT 0," +
-                    "PRIMARY KEY (`id`)," +
-                    "UNIQUE KEY `platform` (`client`, `platform`, `server`, `hour`, `version`)" +
-                    ") ENGINE=MyISAM DEFAULT CHARSET=utf8;", signinloginhourly_tb);
-            String inssql_signinloginhourly = String.format("INSERT INTO %s (client, platform, server, hour, version," +
-                            "newacc, logins) VALUES (%d, '%s', '%s', '%s', '%s', %d, %d) ON DUPLICATE KEY UPDATE " +
-                            "newacc=%d, logins=%d;", signinloginhourly_tb, client, platform_id, server_id, curHour,
-                    appver, signinloginhourly_newacc, signinloginhourly_logins, signinloginhourly_newacc,
-                    signinloginhourly_logins);
+                inssql_overalldatadailyverly = String.format("INSERT INTO overalldatadailyverly (client, platform, " +
+                                "date, version, dau, daunew) VALUES (%d, '%s', %d, '%s', %d, %d) ON DUPLICATE KEY UPDATE " +
+                                "dau=%d, daunew=%d;", client, platform_id, todayDate, appver, overalldatadailyverly_dau,
+                        overalldatadailyverly_daunew, overalldatadailyverly_dau, overalldatadailyverly_daunew);
+
+                inssql_signinlogindaily = String.format("INSERT INTO signinlogindaily (client, platform, server, date," +
+                                "version, newacc, logins) VALUES (%d, '%s', '%s', %d, '%s', %d, %d) ON DUPLICATE KEY UPDATE" +
+                                " newacc=%d, logins=%d;", client, platform_id, server_id, todayDate, appver,
+                        signinlogindaily_newacc, signinlogindaily_logins, signinlogindaily_newacc, signinlogindaily_logins);
+
+                String signinloginhourly_tb = "signinloginhourly_" + todayStr;
+                dmlsql_signinloginhourly_tb = String.format("CREATE TABLE IF NOT EXISTS %s (" +
+                        "`id` int(11) unsigned NOT NULL AUTO_INCREMENT," +
+                        "`client` tinyint(3) unsigned NOT NULL," +
+                        "`platform` mediumint(5) unsigned NOT NULL," +
+                        "`server` mediumint(5) unsigned NOT NULL," +
+                        "`hour` tinyint(3) unsigned NOT NULL," +
+                        "`version` char(10) CHARACTER SET UTF8 NOT NULL," +
+                        "`newdev` int(11) unsigned NOT NULL DEFAULT 0," +
+                        "`newacc` int(11) unsigned NOT NULL DEFAULT 0," +
+                        "`logins` int(11) unsigned NOT NULL DEFAULT 0," +
+                        "`launchdev` int(11) unsigned NOT NULL DEFAULT 0," +
+                        "`launch` int(11) unsigned NOT NULL DEFAULT 0," +
+                        "`lasttime` int(11) unsigned NOT NULL DEFAULT 0," +
+                        "PRIMARY KEY (`id`)," +
+                        "UNIQUE KEY `platform` (`client`, `platform`, `server`, `hour`, `version`)" +
+                        ") ENGINE=MyISAM DEFAULT CHARSET=utf8;", signinloginhourly_tb);
+                inssql_signinloginhourly = String.format("INSERT INTO %s (client, platform, server, hour, version," +
+                                "newacc, logins) VALUES (%d, '%s', '%s', '%s', '%s', %d, %d) ON DUPLICATE KEY UPDATE " +
+                                "newacc=%d, logins=%d;", signinloginhourly_tb, client, platform_id, server_id, curHour,
+                        appver, signinloginhourly_newacc, signinloginhourly_logins, signinloginhourly_newacc,
+                        signinloginhourly_logins);
+
+
+                String newonlinert_tb = "newonlinert_" + todayStr;
+                dmlsql_newonlinert_tb = String.format("CREATE TABLE IF NOT EXISTS %s (" +
+                        "`id` int(11) unsigned NOT NULL AUTO_INCREMENT," +
+                        "`client` tinyint(3) unsigned NOT NULL," +
+                        "`platform` mediumint(5) unsigned NOT NULL," +
+                        "`server` mediumint(5) unsigned NOT NULL," +
+                        "`datetime` int(11) unsigned NOT NULL," +
+                        "`version` char(10) CHARACTER SET UTF8 NOT NULL," +
+                        "`online` int(10) unsigned NOT NULL DEFAULT 0," +
+                        "`newdev` int(11) unsigned NOT NULL DEFAULT 0," +
+                        "`newacc` int(11) unsigned NOT NULL DEFAULT 0," +
+                        "PRIMARY KEY (`id`)," +
+                        "UNIQUE KEY `platform` (`client`, `platform`, `server`, `datetime`, `version`)" +
+                        ") ENGINE=MyISAM DEFAULT CHARSET=utf8;", newonlinert_tb);
+                inssql_newonlinert = String.format("INSERT INTO %s (client, platform, server, datetime, version, newacc)" +
+                                " VALUES (%d, '%s', '%s', %d, '%s', %d) ON DUPLICATE KEY UPDATE newacc=%d;", newonlinert_tb,
+                        client, platform_id, server_id, todayMinuteDate, appver, newonlinert_newacc, newonlinert_newacc);
+
+
+                String activedaily_hau_colname = "daut" + curHour;
+                inssql_activedaily = String.format("INSERT INTO activedaily (client, platform, server, date, version," +
+                                "dau, daunew, %s) VALUES (%d, '%s', '%s', %d, '%s', %d, %d, %d) ON DUPLICATE KEY UPDATE %s=%d;",
+                        activedaily_hau_colname, client, platform_id, server_id, todayDate, appver, signinlogindaily_logins,
+                        signinlogindaily_newacc, signinloginhourly_logins, activedaily_hau_colname, signinloginhourly_logins);
+
+                inssql_lostretdaily = String.format("INSERT INTO lostretdaily (client, platform, server, date, version," +
+                                "retd7_dau, retd7_rechargers, retd14_dau, retd14_rechargers, retd30_dau, retd30_rechargers) VALUES (" +
+                                "%d, '%s', '%s', %d, '%s', %d, %d, %d, %d, %d, %d) ON DUPLICATE KEY UPDATE retd7_dau=%d, " +
+                                "retd7_rechargers=%d, retd14_dau=%d, retd14_rechargers=%d, retd30_dau=%d, retd30_rechargers=%d;",
+                        client, platform_id, server_id, todayDate, appver, retListd7Dau, retListd7Rech, retListd14Dau,
+                        retListd14Rech, retListd30Dau, retListd30Rech, retListd7Dau, retListd7Rech, retListd14Dau,
+                        retListd14Rech, retListd30Dau, retListd30Rech);
+
+                inssql_su_participation_daily = String.format("INSERT INTO su_participation_daily (client, platform," +
+                                "server, date, version, avg_logintimes_newacc, avg_logintimes_dau, avg_logintimes_rechargers) VALUES (%d," +
+                                "'%s', '%s', %d, '%s', %d, %d, %d) ON DUPLICATE KEY UPDATE avg_logintimes_newacc=%d, " +
+                                "avg_logintimes_dau=%d, avg_logintimes_rechargers=%d;", client, platform_id, server_id,
+                        login_datetime_int, appver, avg_logintimes_newacc, avg_logintimes_dau, avg_logintimes_rech,
+                        avg_logintimes_newacc, avg_logintimes_dau, avg_logintimes_rech);
+
+                String inssql_su_participation_dist_daily = "";
+                String perNewaccLogintimesDistKey = "";
+                String perDauLogintimesDistKey = "";
+                String perRechLogintimesDistKey = "";
+
+                for (Integer i = 1; i <= 7; i++) {
+                    inssql_su_participation_dist_daily = "INSERT INTO su_participation_dist_daily (client," +
+                            "platform, server, date, version, distinterval";
+                    String su_participation_dist_daily_col = "";
+                    String su_participation_dist_daily_prepare_col = "";
+                    String su_participation_dist_daily_duplicate_col = "";
+                    boolean ifIns = false;
+
+                    if (1 == ifnew) {
+                        su_participation_dist_daily_col += ", newacc_logintimes_perday";
+
+                        perNewaccLogintimesDistKey = perNewaccLogintimesDistFormerKey + i.toString() + perNewaccLogintimesDistLatterKey;
+                        Long perNewaccLogintimes = !_jedis.exists(perNewaccLogintimesDistKey) ? 0L : _jedis.scard(perNewaccLogintimesDistKey);
+
+                        su_participation_dist_daily_prepare_col += ", " + perNewaccLogintimes.toString();
+                        su_participation_dist_daily_duplicate_col += "newacc_logintimes_perday = " + perNewaccLogintimes.toString();
+
+                        ifIns = true;
+                    }
+                    if (ifDau) {
+                        su_participation_dist_daily_col += ", dau_logintimes_perday";
+
+                        perDauLogintimesDistKey = perDauLogintimesDistFormerKey + i.toString() + perDauLogintimesDistLatterKey;
+                        Long perDauLogintimes = !_jedis.exists(perDauLogintimesDistKey) ? 0L : _jedis.scard(perDauLogintimesDistKey);
+
+                        su_participation_dist_daily_prepare_col += ", " + perDauLogintimes.toString();
+                        if (!"".equals(su_participation_dist_daily_duplicate_col)) {
+                            su_participation_dist_daily_duplicate_col += ", ";
+                        }
+                        su_participation_dist_daily_duplicate_col += "dau_logintimes_perday = " + perDauLogintimes.toString();
+
+                        ifIns = true;
+                    }
+                    if (ifRech) {
+                        su_participation_dist_daily_col += ", rechargers_logintimes_perday";
+
+                        perRechLogintimesDistKey = perRechLogintimesDistFormerKey + i.toString() + perRechLogintimesDistLatterKey;
+                        Long perRechLogintimes = !_jedis.exists(perRechLogintimesDistKey) ? 0L : _jedis.scard(perRechLogintimesDistKey);
+
+                        su_participation_dist_daily_prepare_col += ", " + perRechLogintimes.toString();
+                        if (!"".equals(su_participation_dist_daily_duplicate_col)) {
+                            su_participation_dist_daily_duplicate_col += ", ";
+                        }
+                        su_participation_dist_daily_duplicate_col += "rechargers_logintimes_perday = " + perRechLogintimes.toString();
+
+                        ifIns = true;
+                    }
+
+                    if (ifIns) {
+                        inssql_su_participation_dist_daily += (su_participation_dist_daily_col + ") VALUES (" + client + ", " +
+                                platform_id + ", " + server_id + ", " + todayDate + ", '" + appver + "', " + i.toString() +
+                                su_participation_dist_daily_prepare_col + ") ON DUPLICATE KEY UPDATE " +
+                                su_participation_dist_daily_duplicate_col + ";");
+
+                        sqls += inssql_su_participation_dist_daily;
+                    }
+                }
+
+                //            try {
+                //                sql_ret = _dbconnect.DirectUpdate(game_abbr, inssql_overalldata);
+                //            } catch (SQLException e) {
+                //                e.printStackTrace();
+                //            }
+                //            try {
+                //                sql_ret = _dbconnect.DirectUpdate(game_abbr, inssql_overalldatadaily);
+                //            } catch (SQLException e) {
+                //                e.printStackTrace();
+                //            }
+                //            try {
+                //                sql_ret = _dbconnect.DirectUpdate(game_abbr, inssql_overalldatadailyverly);
+                //            } catch (SQLException e) {
+                //                e.printStackTrace();
+                //            }
+                //            try {
+                //                sql_ret = _dbconnect.DirectUpdate(game_abbr, inssql_signinlogindaily);
+                //            } catch (SQLException e) {
+                //                e.printStackTrace();
+                //            }
+                //            try {
+                //                sql_ret = _dbconnect.DirectUpdate(game_abbr, dmlsql_signinloginhourly_tb);
+                //            } catch (SQLException e) {
+                //                e.printStackTrace();
+                //            }
+                //            try {
+                //                sql_ret = _dbconnect.DirectUpdate(game_abbr, inssql_signinloginhourly);
+                //            } catch (SQLException e) {
+                //                e.printStackTrace();
+                //            }
+                //            try {
+                //                sql_ret = _dbconnect.DirectUpdate(game_abbr, dmlsql_loginlist_tb);
+                //            } catch (SQLException e) {
+                //                e.printStackTrace();
+                //            }
+                //            try {
+                //                sql_ret = _dbconnect.DirectUpdate(game_abbr, inssql_loginlist);
+                //            } catch (SQLException e) {
+                //                e.printStackTrace();
+                //            }
+                //            try {
+                //                sql_ret = _dbconnect.DirectUpdate(game_abbr, dmlsql_newonlinert_tb);
+                //            } catch (SQLException e) {
+                //                e.printStackTrace();
+                //            }
+                //            try {
+                //                sql_ret = _dbconnect.DirectUpdate(game_abbr, inssql_newonlinert);
+                //            } catch (SQLException e) {
+                //                e.printStackTrace();
+                //            }
+
+
+            }
 
             String loginlist_tb = "loginlist_" + todayStr;
-            String dmlsql_loginlist_tb = String.format("CREATE TABLE IF NOT EXISTS %s (" +
+            dmlsql_loginlist_tb = String.format("CREATE TABLE IF NOT EXISTS %s (" +
                     "`id` int(11) unsigned NOT NULL AUTO_INCREMENT," +
                     "`client` tinyint(3) unsigned NOT NULL," +
                     "`platform` mediumint(5) unsigned NOT NULL," +
@@ -780,166 +955,12 @@ public class MLoginCalcBolt extends BaseBasicBolt {
                     "`ifrecharge` tinyint(2) unsigned NOT NULL DEFAULT 0," +
                     "PRIMARY KEY (`id`)" +
                     ") ENGINE=MyISAM DEFAULT CHARSET=utf8;", loginlist_tb);
-            String inssql_loginlist = String.format("INSERT INTO %s (client, platform, server, version, account, " +
+            inssql_loginlist = String.format("INSERT INTO %s (client, platform, server, version, account, " +
                             "devid, os, appver, model, resolution, operator, network, clientip, district, osver," +
                             "osbuilder, devtype, ifnew, ifrecharge) VALUES (%d, '%s', '%s', '%s', '%s', '%s', '%s', " +
                             "'%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', %d, %d);", loginlist_tb,
                     client, platform_id, server_id, appver, uname, devid, system, appver, model, resolution, sp,
-                    network, client_ip, district, osver, osbuilder, devtype, ifnew, ifRech?1:0);
-
-            String newonlinert_tb = "newonlinert_" + todayStr;
-            String dmlsql_newonlinert_tb = String.format("CREATE TABLE IF NOT EXISTS %s (" +
-                    "`id` int(11) unsigned NOT NULL AUTO_INCREMENT," +
-                    "`client` tinyint(3) unsigned NOT NULL," +
-                    "`platform` mediumint(5) unsigned NOT NULL," +
-                    "`server` mediumint(5) unsigned NOT NULL," +
-                    "`datetime` int(11) unsigned NOT NULL," +
-                    "`version` char(10) CHARACTER SET UTF8 NOT NULL," +
-                    "`online` int(10) unsigned NOT NULL DEFAULT 0," +
-                    "`newdev` int(11) unsigned NOT NULL DEFAULT 0," +
-                    "`newacc` int(11) unsigned NOT NULL DEFAULT 0," +
-                    "PRIMARY KEY (`id`)," +
-                    "UNIQUE KEY `platform` (`client`, `platform`, `server`, `datetime`, `version`)" +
-                    ") ENGINE=MyISAM DEFAULT CHARSET=utf8;", newonlinert_tb);
-            String inssql_newonlinert = String.format("INSERT INTO %s (client, platform, server, datetime, version, newacc)" +
-                            " VALUES (%d, '%s', '%s', %d, '%s', %d) ON DUPLICATE KEY UPDATE newacc=%d;", newonlinert_tb,
-                    client, platform_id, server_id, todayMinuteDate, appver, newonlinert_newacc, newonlinert_newacc);
-
-
-            String activedaily_hau_colname = "daut" + curHour;
-            String inssql_activedaily = String.format("INSERT INTO activedaily (client, platform, server, date, version," +
-                    "dau, daunew, %s) VALUES (%d, '%s', '%s', %d, '%s', %d, %d, %d) ON DUPLICATE KEY UPDATE %s=%d;",
-                    activedaily_hau_colname, client, platform_id, server_id, todayDate, appver, signinlogindaily_logins,
-                    signinlogindaily_newacc, signinloginhourly_logins, activedaily_hau_colname, signinloginhourly_logins);
-
-            String inssql_lostretdaily = String.format("INSERT INTO lostretdaily (client, platform, server, date, version," +
-                    "retd7_dau, retd7_rechargers, retd14_dau, retd14_rechargers, retd30_dau, retd30_rechargers) VALUES (" +
-                    "%d, '%s', '%s', %d, '%s', %d, %d, %d, %d, %d, %d) ON DUPLICATE KEY UPDATE retd7_dau=%d, " +
-                    "retd7_rechargers=%d, retd14_dau=%d, retd14_rechargers=%d, retd30_dau=%d, retd30_rechargers=%d;",
-                    client, platform_id, server_id, todayDate, appver, retListd7Dau, retListd7Rech, retListd14Dau,
-                    retListd14Rech, retListd30Dau, retListd30Rech, retListd7Dau, retListd7Rech, retListd14Dau,
-                    retListd14Rech, retListd30Dau, retListd30Rech);
-
-            String inssql_su_participation_daily = String.format("INSERT INTO su_participation_daily (client, platform," +
-                            "server, date, version, avg_logintimes_newacc, avg_logintimes_dau, avg_logintimes_rechargers) VALUES (%d," +
-                            "'%s', '%s', %d, '%s', %d, %d, %d) ON DUPLICATE KEY UPDATE avg_logintimes_newacc=%d, " +
-                            "avg_logintimes_dau=%d, avg_logintimes_rechargers=%d;", client, platform_id, server_id,
-                    login_datetime_int, appver, avg_logintimes_newacc, avg_logintimes_dau, avg_logintimes_rech,
-                    avg_logintimes_newacc, avg_logintimes_dau, avg_logintimes_rech);
-
-            String inssql_su_participation_dist_daily = "";
-            String perNewaccLogintimesDistKey = "";
-            String perDauLogintimesDistKey = "";
-            String perRechLogintimesDistKey = "";
-
-            for (Integer i=1 ; i<=7 ; i++) {
-                inssql_su_participation_dist_daily = "INSERT INTO su_participation_dist_daily (client," +
-                        "platform, server, date, version, distinterval";
-                String su_participation_dist_daily_col = "";
-                String su_participation_dist_daily_prepare_col = "";
-                String su_participation_dist_daily_duplicate_col = "";
-                boolean ifIns = false;
-
-                if (1 == ifnew) {
-                    su_participation_dist_daily_col += ", newacc_logintimes_perday";
-
-                    perNewaccLogintimesDistKey = perNewaccLogintimesDistFormerKey + i.toString() + perNewaccLogintimesDistLatterKey;
-                    Long perNewaccLogintimes = !_jedis.exists(perNewaccLogintimesDistKey) ? 0L : _jedis.scard(perNewaccLogintimesDistKey);
-
-                    su_participation_dist_daily_prepare_col += ", " + perNewaccLogintimes.toString();
-                    su_participation_dist_daily_duplicate_col += "newacc_logintimes_perday = " + perNewaccLogintimes.toString();
-
-                    ifIns = true;
-                }
-                if (ifDau) {
-                    su_participation_dist_daily_col += ", dau_logintimes_perday";
-
-                    perDauLogintimesDistKey = perDauLogintimesDistFormerKey + i.toString() + perDauLogintimesDistLatterKey;
-                    Long perDauLogintimes = !_jedis.exists(perDauLogintimesDistKey) ? 0L : _jedis.scard(perDauLogintimesDistKey);
-
-                    su_participation_dist_daily_prepare_col += ", " + perDauLogintimes.toString();
-                    if (!"".equals(su_participation_dist_daily_duplicate_col)) {
-                        su_participation_dist_daily_duplicate_col += ", ";
-                    }
-                    su_participation_dist_daily_duplicate_col += "dau_logintimes_perday = " + perDauLogintimes.toString();
-
-                    ifIns = true;
-                }
-                if (ifRech) {
-                    su_participation_dist_daily_col += ", rechargers_logintimes_perday";
-
-                    perRechLogintimesDistKey = perRechLogintimesDistFormerKey + i.toString() + perRechLogintimesDistLatterKey;
-                    Long perRechLogintimes = !_jedis.exists(perRechLogintimesDistKey) ? 0L : _jedis.scard(perRechLogintimesDistKey);
-
-                    su_participation_dist_daily_prepare_col += ", " + perRechLogintimes.toString();
-                    if (!"".equals(su_participation_dist_daily_duplicate_col)) {
-                        su_participation_dist_daily_duplicate_col += ", ";
-                    }
-                    su_participation_dist_daily_duplicate_col += "rechargers_logintimes_perday = " + perRechLogintimes.toString();
-
-                    ifIns = true;
-                }
-
-                if (ifIns) {
-                    inssql_su_participation_dist_daily += (su_participation_dist_daily_col + ") VALUES ("+client+", "+
-                        platform_id+", "+server_id+", "+todayDate+", '"+appver+"', "+i.toString()+
-                        su_participation_dist_daily_prepare_col+") ON DUPLICATE KEY UPDATE "+
-                        su_participation_dist_daily_duplicate_col+";");
-
-                    sqls += inssql_su_participation_dist_daily;
-                }
-            }
-
-//            try {
-//                sql_ret = _dbconnect.DirectUpdate(game_abbr, inssql_overalldata);
-//            } catch (SQLException e) {
-//                e.printStackTrace();
-//            }
-//            try {
-//                sql_ret = _dbconnect.DirectUpdate(game_abbr, inssql_overalldatadaily);
-//            } catch (SQLException e) {
-//                e.printStackTrace();
-//            }
-//            try {
-//                sql_ret = _dbconnect.DirectUpdate(game_abbr, inssql_overalldatadailyverly);
-//            } catch (SQLException e) {
-//                e.printStackTrace();
-//            }
-//            try {
-//                sql_ret = _dbconnect.DirectUpdate(game_abbr, inssql_signinlogindaily);
-//            } catch (SQLException e) {
-//                e.printStackTrace();
-//            }
-//            try {
-//                sql_ret = _dbconnect.DirectUpdate(game_abbr, dmlsql_signinloginhourly_tb);
-//            } catch (SQLException e) {
-//                e.printStackTrace();
-//            }
-//            try {
-//                sql_ret = _dbconnect.DirectUpdate(game_abbr, inssql_signinloginhourly);
-//            } catch (SQLException e) {
-//                e.printStackTrace();
-//            }
-//            try {
-//                sql_ret = _dbconnect.DirectUpdate(game_abbr, dmlsql_loginlist_tb);
-//            } catch (SQLException e) {
-//                e.printStackTrace();
-//            }
-//            try {
-//                sql_ret = _dbconnect.DirectUpdate(game_abbr, inssql_loginlist);
-//            } catch (SQLException e) {
-//                e.printStackTrace();
-//            }
-//            try {
-//                sql_ret = _dbconnect.DirectUpdate(game_abbr, dmlsql_newonlinert_tb);
-//            } catch (SQLException e) {
-//                e.printStackTrace();
-//            }
-//            try {
-//                sql_ret = _dbconnect.DirectUpdate(game_abbr, inssql_newonlinert);
-//            } catch (SQLException e) {
-//                e.printStackTrace();
-//            }
+                    network, client_ip, district, osver, osbuilder, devtype, ifnew, ifRech ? 1 : 0);
 
             sqls += inssql_overalldata;
             sqls += inssql_overalldatadaily;
@@ -960,13 +981,13 @@ public class MLoginCalcBolt extends BaseBasicBolt {
             sqls += inssql_lostretdaily;
             sqls += inssql_su_participation_daily;
 
-System.out.println(sqls);
+            System.out.println(sqls);
             try {
                 sql_ret = _dbconnect.DirectUpdateBatch(game_abbr, sqls);
             } catch (SQLException e) {
                 e.printStackTrace();
             }
-System.out.println("|||||-----batch update result: " + sql_ret);
+            System.out.println("|||||-----batch update result: " + sql_ret);
         }
 
     }

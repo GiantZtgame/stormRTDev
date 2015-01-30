@@ -246,51 +246,76 @@ public class MLevelCalcBolt extends BaseBasicBolt {
         String mysql_user = _prop.getProperty("game." + game_abbr + ".mysql_user");
         String mysql_passwd= _prop.getProperty("game." + game_abbr + ".mysql_passwd");
 
-        if (mysql.getConnection(game_abbr, mysql_host, mysql_port, mysql_db, mysql_user, mysql_passwd)
-                && _dbFlushTimer.ifItsTime2FlushDb(client.toString()+platform_id+server_id+appver)) {
+        if (mysql.getConnection(game_abbr, mysql_host, mysql_port, mysql_db, mysql_user, mysql_passwd)) {
             boolean sql_ret = false;
             String sqls = "";
 
-            String level_tb = "level_" + todayStr;
-            String dmlsql_level = String.format("CREATE TABLE IF NOT EXISTS %s (" +
-                    "`id` int(11) unsigned NOT NULL AUTO_INCREMENT," +
-                    "`client` tinyint(3) unsigned NOT NULL," +
+            String dmlsql_level = "";
+            String inssql_level = "";
+            String upsql_level = "";
+            String dmlsql_lvlist_tb = "";
+            String inssql_lvlist = "";
+
+            if (_dbFlushTimer.ifItsTime2FlushDb(client.toString()+platform_id+server_id+appver)) {
+                String level_tb = "level_" + todayStr;
+                dmlsql_level = String.format("CREATE TABLE IF NOT EXISTS %s (" +
+                        "`id` int(11) unsigned NOT NULL AUTO_INCREMENT," +
+                        "`client` tinyint(3) unsigned NOT NULL," +
+                        "`platform` mediumint(5) unsigned NOT NULL," +
+                        "`server` mediumint(5) unsigned NOT NULL," +
+                        "`date` int(11) unsigned NOT NULL," +
+                        "`version` char(10) CHARACTER SET UTF8 NOT NULL," +
+                        "`level` mediumint(5) unsigned NOT NULL DEFAULT 0," +
+                        "`lv_time` int(11) unsigned NOT NULL DEFAULT 0," +
+                        "`lv_times` int(11) unsigned NOT NULL DEFAULT 0," +
+                        "`lv_num` int(11) unsigned NOT NULL DEFAULT 0," +
+                        "`seg1_acc` int(11) unsigned NOT NULL DEFAULT 0," +
+                        "`seg2_acc` int(11) unsigned NOT NULL DEFAULT 0," +
+                        "`seg3_acc` int(11) unsigned NOT NULL DEFAULT 0," +
+                        "`seg4_acc` int(11) unsigned NOT NULL DEFAULT 0," +
+                        "`seg5_acc` int(11) unsigned NOT NULL DEFAULT 0," +
+                        "`seg6_acc` int(11) unsigned NOT NULL DEFAULT 0," +
+                        "`seg7_acc` int(11) unsigned NOT NULL DEFAULT 0," +
+                        "`seg8_acc` int(11) unsigned NOT NULL DEFAULT 0," +
+                        "PRIMARY KEY (`id`)," +
+                        "UNIQUE KEY `platform` (`client`, `platform`, `server`, `date`, `version`, `level`)" +
+                        ") ENGINE=MyISAM DEFAULT CHARSET=utf8;", level_tb);
+                String segment_col = "seg" + mlevelSegmentId.toString() + "_acc";
+                inssql_level = String.format("INSERT INTO %s (client, platform, server, date, version, level, " +
+                                "lv_time, lv_times, lv_num, %s) VALUES (%d, %s, %s, %d, %s, %s, %d, %d, %d, %d) ON DUPLICATE KEY " +
+                                "UPDATE lv_time=%d, lv_times=%d, lv_num=%d, %s=%d;", level_tb, segment_col, client, platform_id,
+                        server_id, todayDate, appver, level, mlevelTotalTime, mlevelTotalTimes, mlevelDistThisLvNum,
+                        mlevelSegmentAcc, mlevelTotalTime, mlevelTotalTimes, mlevelDistThisLvNum, segment_col,
+                        mlevelSegmentAcc);
+
+                if (level_int > 1) {
+                    upsql_level = String.format("UPDATE %s SET lv_num=%d WHERE client=%d, platform=%s, server=%s," +
+                                    "date=%d, version=%s, level=%s;", level_tb, mlevelDistFormerLvNum, client, platform_id, server_id,
+                            todayDate, appver, formerLv);
+                }
+            }
+
+            String lvlist_tb = "lvlist_" + todayStr;
+            dmlsql_lvlist_tb = String.format("CREATE TABLE IF NOT EXISTS %s (" +
+                    "`id`int(11) unsigned NOT NULL AUTO_INCREMENT," +
                     "`platform` mediumint(5) unsigned NOT NULL," +
                     "`server` mediumint(5) unsigned NOT NULL," +
-                    "`date` int(11) unsigned NOT NULL," +
-                    "`version` char(10) CHARACTER SET UTF8 NOT NULL," +
+                    "`account` char(128) CHARACTER SET UTF8 NOT NULL DEFAULT ''," +
+                    "`cname` char(128) CHARACTER SET UTF8 NOT NULL DEFAULT ''," +
+                    "`datetime` int(11) unsigned NOT NULL," +
                     "`level` mediumint(5) unsigned NOT NULL DEFAULT 0," +
                     "`lv_time` int(11) unsigned NOT NULL DEFAULT 0," +
-                    "`lv_times` int(11) unsigned NOT NULL DEFAULT 0," +
-                    "`lv_num` int(11) unsigned NOT NULL DEFAULT 0," +
-                    "`seg1_acc` int(11) unsigned NOT NULL DEFAULT 0," +
-                    "`seg2_acc` int(11) unsigned NOT NULL DEFAULT 0," +
-                    "`seg3_acc` int(11) unsigned NOT NULL DEFAULT 0," +
-                    "`seg4_acc` int(11) unsigned NOT NULL DEFAULT 0," +
-                    "`seg5_acc` int(11) unsigned NOT NULL DEFAULT 0," +
-                    "`seg6_acc` int(11) unsigned NOT NULL DEFAULT 0," +
-                    "`seg7_acc` int(11) unsigned NOT NULL DEFAULT 0," +
-                    "`seg8_acc` int(11) unsigned NOT NULL DEFAULT 0," +
-                    "PRIMARY KEY (`id`)," +
-                    "UNIQUE KEY `platform` (`client`, `platform`, `server`, `date`, `version`, `level`)" +
-                    ") ENGINE=MyISAM DEFAULT CHARSET=utf8;", level_tb);
-            String segment_col = "seg" + mlevelSegmentId.toString() + "_acc";
-            String inssql_level = String.format("INSERT INTO %s (client, platform, server, date, version, level, " +
-                    "lv_time, lv_times, lv_num, %s) VALUES (%d, %s, %s, %d, %s, %s, %d, %d, %d, %d) ON DUPLICATE KEY " +
-                    "UPDATE lv_time=%d, lv_times=%d, lv_num=%d, %s=%d;", level_tb, segment_col, client, platform_id,
-                    server_id, todayDate, appver, level, mlevelTotalTime, mlevelTotalTimes, mlevelDistThisLvNum,
-                    mlevelSegmentAcc, mlevelTotalTime, mlevelTotalTimes, mlevelDistThisLvNum, segment_col,
-                    mlevelSegmentAcc);
+                    "PRIMARY KEY (`id`)" +
+                    ") ENGINE=MyISAM DEFAULT CHARSET=utf8;", lvlist_tb);
+            inssql_lvlist = String.format("INSERT INTO %s (platform, server, account, cname, datetime, level, lv_time" +
+                            ") VALUES ('%s', '%s', '%s', '%s', '%s', %d);", lvlist_tb, platform_id, server_id, uname,
+                    cname, level_datetime_int, level, costTime);
 
             sqls += dmlsql_level;
             sqls += inssql_level;
-
-            if (level_int > 1) {
-                String upsql_level = String.format("UPDATE %s SET lv_num=%d WHERE client=%d, platform=%s, server=%s," +
-                        "date=%d, version=%s, level=%s;", level_tb, mlevelDistFormerLvNum, client, platform_id, server_id,
-                        todayDate, appver, formerLv);
-                sqls += upsql_level;
-            }
+            sqls += upsql_level;
+            sqls += dmlsql_lvlist_tb;
+            sqls += inssql_lvlist;
 
 System.out.println(sqls);
             try {
