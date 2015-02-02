@@ -10,6 +10,7 @@ import storm.qule_util.*;
 import storm.qule_util.mgame.system2client;
 
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -169,13 +170,14 @@ public class MLevelCalcBolt extends BaseBasicBolt {
         //flush to level cache list
         String mlevelFlushKey = "mlevel:" + game_abbr + ":" + todayDate + ":record";
         String mlevelFlushField = client.toString() + ":" + platform_id + ":" + server_id + ":" + appver + ":" + level;
-        List<String> mlevelCachedDetail = _jedis.hmget(mlevelFlushKey, mlevelFlushField);
+        List<String> mlevelCachedDetail = new ArrayList<String>();
+        mlevelCachedDetail = _jedis.hmget(mlevelFlushKey, mlevelFlushField);
         String mlevelFlushValue = "";
-        if (!mlevelCachedDetail.isEmpty()) {
-            mlevelFlushValue = mlevelCachedDetail.get(0);
+        if (mlevelCachedDetail.get(0) != null && !mlevelCachedDetail.isEmpty()) {
+            mlevelFlushValue = mlevelCachedDetail.get(0).toString();
         }
         String[] mlevelFlushValueList = {};
-        if (!mlevelFlushValue.equals("")) {
+        if (mlevelFlushValue != null && !mlevelFlushValue.equals("")) {
             mlevelFlushValueList = mlevelFlushValue.split(":");
         }
         String lv_time = mlevelTotalTime.toString(), lv_times = mlevelTotalTimes.toString(),
@@ -282,15 +284,15 @@ public class MLevelCalcBolt extends BaseBasicBolt {
                         ") ENGINE=MyISAM DEFAULT CHARSET=utf8;", level_tb);
                 String segment_col = "seg" + mlevelSegmentId.toString() + "_acc";
                 inssql_level = String.format("INSERT INTO %s (client, platform, server, date, version, level, " +
-                                "lv_time, lv_times, lv_num, %s) VALUES (%d, %s, %s, %d, %s, %s, %d, %d, %d, %d) ON DUPLICATE KEY " +
+                                "lv_time, lv_times, lv_num, %s) VALUES (%d, '%s', '%s', %d, '%s', '%s', %d, %d, %d, %d) ON DUPLICATE KEY " +
                                 "UPDATE lv_time=%d, lv_times=%d, lv_num=%d, %s=%d;", level_tb, segment_col, client, platform_id,
                         server_id, todayDate, appver, level, mlevelTotalTime, mlevelTotalTimes, mlevelDistThisLvNum,
                         mlevelSegmentAcc, mlevelTotalTime, mlevelTotalTimes, mlevelDistThisLvNum, segment_col,
                         mlevelSegmentAcc);
 
                 if (level_int > 1) {
-                    upsql_level = String.format("UPDATE %s SET lv_num=%d WHERE client=%d, platform=%s, server=%s," +
-                                    "date=%d, version=%s, level=%s;", level_tb, mlevelDistFormerLvNum, client, platform_id, server_id,
+                    upsql_level = String.format("UPDATE %s SET lv_num=%d WHERE client=%d, platform='%s', server='%s'," +
+                                    "date=%d, version='%s', level='%s';", level_tb, mlevelDistFormerLvNum, client, platform_id, server_id,
                             todayDate, appver, formerLv);
                 }
             }
@@ -308,8 +310,8 @@ public class MLevelCalcBolt extends BaseBasicBolt {
                     "PRIMARY KEY (`id`)" +
                     ") ENGINE=MyISAM DEFAULT CHARSET=utf8;", lvlist_tb);
             inssql_lvlist = String.format("INSERT INTO %s (platform, server, account, cname, datetime, level, lv_time" +
-                            ") VALUES ('%s', '%s', '%s', '%s', '%s', %d);", lvlist_tb, platform_id, server_id, uname,
-                    cname, level_datetime_int, level, costTime);
+                            ") VALUES ('%s', '%s', '%s', '%s', %d, '%s', %d);", lvlist_tb, platform_id, server_id,
+                    uname, cname, level_datetime_int, level, costTime);
 
             sqls += dmlsql_level;
             sqls += inssql_level;
