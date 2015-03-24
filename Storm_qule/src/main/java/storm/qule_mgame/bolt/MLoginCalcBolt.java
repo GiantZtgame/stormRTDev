@@ -795,9 +795,11 @@ public class MLoginCalcBolt extends BaseBasicBolt {
 
                 String activedaily_hau_colname = "daut" + curHour;
                 inssql_activedaily = String.format("INSERT INTO activedaily (client, platform, server, date, version," +
-                                "dau, daunew, %s) VALUES (%d, '%s', '%s', %d, '%s', %d, %d, %d) ON DUPLICATE KEY UPDATE %s=%d;",
+                                "dau, daunew, %s) VALUES (%d, '%s', '%s', %d, '%s', %d, %d, %d) ON DUPLICATE KEY " +
+                                "UPDATE dau=%d, daunew=%d, %s=%d;",
                         activedaily_hau_colname, client, platform_id, server_id, todayDate, appver, signinlogindaily_logins,
-                        signinlogindaily_newacc, signinloginhourly_logins, activedaily_hau_colname, signinloginhourly_logins);
+                        signinlogindaily_newacc, signinlogindaily_logins, signinlogindaily_newacc,
+                        signinloginhourly_logins, activedaily_hau_colname, signinloginhourly_logins);
 
                 inssql_lostretdaily = String.format("INSERT INTO lostretdaily (client, platform, server, date, version," +
                                 "retd7_dau, retd7_rechargers, retd14_dau, retd14_rechargers, retd30_dau, retd30_rechargers) VALUES (" +
